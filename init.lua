@@ -15,6 +15,15 @@ vim.opt.updatetime = 250
 vim.opt.timeoutlen = 400
 vim.opt.undofile = true
 vim.opt.termguicolors = true
+vim.opt.fillchars:append({
+  horiz = "━",
+  horizdown = "┳",
+  horizup = "┻",
+  vert = "┃",
+  verthoriz = "╋",
+  vertleft = "┫",
+  vertright = "┣",
+})
 vim.opt.autocomplete = true
 vim.opt.autocompletedelay = 120
 vim.opt.complete = { "o^20", ".^10", "w^5", "b^5", "u^5" }
@@ -39,11 +48,15 @@ vim.keymap.set("n", "<leader>q", "<cmd>copen<cr>", { desc = "Open quickfix list"
 vim.keymap.set("n", "<leader>tn", "<cmd>tabnew<cr>", { desc = "New tab" })
 vim.keymap.set("n", "<leader>tc", "<cmd>tabclose<cr>", { desc = "Close tab" })
 vim.keymap.set("n", "<leader>to", "<cmd>tabonly<cr>", { desc = "Close other tabs" })
+vim.keymap.set("n", "<A-h>", "<cmd>tabprevious<cr>", { desc = "Previous tab" })
+vim.keymap.set("n", "<A-l>", "<cmd>tabnext<cr>", { desc = "Next tab" })
 vim.keymap.set("n", "<leader>rr", "<cmd>restart<cr>", { desc = "Restart Neovim" })
-vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Focus left window" })
-vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Focus lower window" })
-vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Focus upper window" })
-vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Focus right window" })
+vim.keymap.set("n", "<leader>rs", "<cmd>source $MYVIMRC<cr>", { desc = "Source Neovim config" })
+vim.keymap.set("n", "<A-t>", function()
+  vim.cmd("belowright split")
+  vim.cmd("terminal")
+  vim.cmd("startinsert")
+end, { desc = "Open terminal below" })
 vim.keymap.set("t", "<C-]>", [[<C-\><C-n>]], { desc = "Leave terminal mode" })
 
 -- Make diagnostics recognizable at a glance and easy to inspect.
@@ -74,6 +87,19 @@ vim.diagnostic.config({
 vim.keymap.set("n", "gl", function()
   vim.diagnostic.open_float({ scope = "line" })
 end, { desc = "Show line diagnostics" })
+
+local function map_diagnostic_navigation(lhs, count, severity, description)
+  vim.keymap.set("n", lhs, function()
+    vim.diagnostic.jump({ count = count, severity = severity })
+  end, { desc = description })
+end
+
+map_diagnostic_navigation("]w", 1, vim.diagnostic.severity.WARN, "Next warning")
+map_diagnostic_navigation("[w", -1, vim.diagnostic.severity.WARN, "Previous warning")
+map_diagnostic_navigation("]e", 1, vim.diagnostic.severity.ERROR, "Next error")
+map_diagnostic_navigation("[e", -1, vim.diagnostic.severity.ERROR, "Previous error")
+map_diagnostic_navigation("]i", 1, vim.diagnostic.severity.INFO, "Next info diagnostic")
+map_diagnostic_navigation("[i", -1, vim.diagnostic.severity.INFO, "Previous info diagnostic")
 
 -- Locate a singleton tool tab and its terminal window.
 local function find_exclusive_tab(tab_marker, buffer_marker)
@@ -136,6 +162,7 @@ end, { desc = "Codex in Neovim config" })
 -- Neovim 0.12 manages this profile's small plugin set itself.
 vim.pack.add({
   { src = "https://github.com/ibhagwan/fzf-lua", version = "main" },
+  { src = "https://github.com/lewis6991/gitsigns.nvim" },
   { src = "https://github.com/folke/tokyonight.nvim" },
   { src = "https://github.com/nvim-lualine/lualine.nvim" },
   { src = "https://github.com/nvim-neo-tree/neo-tree.nvim", version = vim.version.range("3") },
@@ -145,6 +172,35 @@ vim.pack.add({
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
   { src = "https://github.com/folke/which-key.nvim" },
+  { src = "https://github.com/christoomey/vim-tmux-navigator" },
+})
+
+require("gitsigns").setup({
+  on_attach = function(bufnr)
+    local gitsigns = require("gitsigns")
+    local function map(mode, lhs, rhs, desc)
+      vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+    end
+
+    map("n", "]c", function()
+      if vim.wo.diff then
+        vim.cmd.normal({ "]c", bang = true })
+      else
+        gitsigns.nav_hunk("next")
+      end
+    end, "Next Git hunk")
+    map("n", "[c", function()
+      if vim.wo.diff then
+        vim.cmd.normal({ "[c", bang = true })
+      else
+        gitsigns.nav_hunk("prev")
+      end
+    end, "Previous Git hunk")
+
+    map("n", "<leader>hp", gitsigns.preview_hunk_inline, "Preview Git hunk")
+    map("n", "<leader>hs", gitsigns.stage_hunk, "Stage Git hunk")
+    map("n", "<leader>hr", gitsigns.reset_hunk, "Reset Git hunk")
+  end,
 })
 
 vim.api.nvim_create_user_command("PackUpdate", function()
@@ -232,10 +288,14 @@ require("tokyonight").setup({
     comments = { italic = true },
     keywords = { italic = true },
   },
+  on_highlights = function(highlights, colors)
+    highlights.WinSeparator = { fg = colors.blue, bold = true }
+  end,
 })
 vim.cmd.colorscheme("tokyonight")
 
 vim.opt.laststatus = 3
+local statusline_colors = require("tokyonight.colors").setup({ style = "moon" })
 require("lualine").setup({
   options = {
     theme = "tokyonight",
@@ -246,24 +306,19 @@ require("lualine").setup({
     section_separators = { left = "", right = "" },
   },
   sections = {
-    lualine_a = { "mode" },
+    lualine_a = {
+      {
+        "mode",
+        color = function()
+          if vim.bo.modified and vim.api.nvim_get_mode().mode:match("^n") then
+            return { bg = statusline_colors.yellow, fg = statusline_colors.black }
+          end
+        end,
+      },
+    },
     lualine_b = { "branch" },
     lualine_c = {
       { "filename", path = 1, shorting_target = 40 },
-      {
-        function()
-          if vim.bo.buftype ~= "" then
-            return ""
-          end
-          if vim.api.nvim_buf_get_name(0) == "" then
-            return "○ new"
-          end
-          return vim.bo.modified and "● unsaved" or "✓ saved"
-        end,
-        color = function()
-          return { fg = vim.bo.modified and "#e0af68" or "#9ece6a" }
-        end,
-      },
     },
     lualine_x = { "diagnostics", "lsp_status" },
     lualine_y = { "filetype", "progress" },
@@ -289,9 +344,22 @@ require("lualine").setup({
         max_length = function()
           return vim.o.columns
         end,
-        use_mode_colors = true,
+        use_mode_colors = false,
+        tabs_color = {
+          active = {
+            fg = statusline_colors.blue,
+            bg = statusline_colors.bg_highlight,
+            gui = "bold",
+          },
+          inactive = {
+            fg = statusline_colors.comment,
+            bg = statusline_colors.bg_statusline,
+          },
+        },
+        component_separators = { left = "", right = "" },
+        section_separators = { left = "", right = "" },
         show_modified_status = true,
-        symbols = { modified = " [+]" },
+        symbols = { modified = " ●" },
       },
     },
     lualine_b = {},
