@@ -73,7 +73,18 @@ vim.keymap.set("n", "<A-l>", "<cmd>tabnext<cr>", { desc = "Next tab" })
 vim.keymap.set("t", "<A-h>", "<cmd>tabprevious<cr>", { desc = "Previous tab" })
 vim.keymap.set("t", "<A-l>", "<cmd>tabnext<cr>", { desc = "Next tab" })
 vim.keymap.set("n", "<leader>rr", "<cmd>restart<cr>", { desc = "Restart Neovim" })
-vim.keymap.set("n", "<leader>rs", "<cmd>source $MYVIMRC<cr>", { desc = "Source Neovim config" })
+vim.keymap.set("n", "<leader>rs", function()
+  local config_path = vim.env.MYVIMRC or (vim.fn.stdpath("config") .. "/init.lua")
+  local ok, error_message = pcall(vim.api.nvim_cmd, {
+    cmd = "source",
+    args = { config_path },
+  }, {})
+  if ok then
+    vim.notify("Neovim config reloaded", vim.log.levels.INFO)
+  else
+    vim.notify("Neovim config reload failed:\n" .. error_message, vim.log.levels.ERROR)
+  end
+end, { desc = "Source Neovim config" })
 vim.keymap.set("n", "<A-t>", function()
   vim.cmd("belowright split")
   vim.cmd("terminal")
@@ -225,6 +236,38 @@ local function find_exclusive_tab(tab_marker, buffer_marker)
   end
 end
 
+local codex_terminal_group = vim.api.nvim_create_augroup("CodexTerminal", { clear = true })
+vim.api.nvim_create_autocmd("TermClose", {
+  group = codex_terminal_group,
+  callback = function(event)
+    local marker_ok, is_codex_buffer = pcall(vim.api.nvim_buf_get_var, event.buf, "codex_config_buffer")
+    if not marker_ok or not is_codex_buffer then
+      return
+    end
+
+    vim.schedule(function()
+      local tab = find_exclusive_tab("codex_config_tab", "codex_config_buffer")
+      if tab and vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+        local tab_number = vim.api.nvim_tabpage_get_number(tab)
+        vim.api.nvim_cmd({ cmd = "tabclose", args = { tostring(tab_number) }, bang = true }, {})
+      end
+      if vim.api.nvim_buf_is_valid(event.buf) then
+        vim.api.nvim_buf_delete(event.buf, { force = true })
+      end
+    end)
+  end,
+})
+
+local existing_codex_tab = find_exclusive_tab("codex_config_tab", "codex_config_buffer")
+if existing_codex_tab then
+  vim.api.nvim_tabpage_set_var(existing_codex_tab, "tabname", "Codex")
+end
+
+local stale_codex_buffer = vim.fn.bufnr("Codex: nvim-lite")
+if stale_codex_buffer >= 0 and #vim.fn.win_findbuf(stale_codex_buffer) == 0 then
+  vim.api.nvim_buf_delete(stale_codex_buffer, { force = true })
+end
+
 -- Full Git UI, using one dedicated tab and one lazygit process.
 vim.keymap.set("n", "<leader>gg", function()
   local tab, win = find_exclusive_tab("lazygit_tab", "lazygit_buffer")
@@ -253,7 +296,7 @@ vim.keymap.set("n", "<leader>cc", function()
   end
 
   vim.cmd("tabnew")
-  local job = vim.fn.jobstart({ "codex" }, {
+  local job = vim.fn.jobstart({ "codex", "resume", "--last" }, {
     term = true,
     cwd = vim.fn.stdpath("config"),
   })
@@ -261,8 +304,8 @@ vim.keymap.set("n", "<leader>cc", function()
     vim.notify("Could not start Codex CLI", vim.log.levels.ERROR)
     return
   end
-  vim.api.nvim_buf_set_name(0, "Codex: nvim-lite")
   vim.api.nvim_tabpage_set_var(0, "codex_config_tab", true)
+  vim.api.nvim_tabpage_set_var(0, "tabname", "Codex")
   vim.api.nvim_buf_set_var(0, "codex_config_buffer", true)
   vim.cmd("startinsert")
 end, { desc = "Codex in Neovim config" })
