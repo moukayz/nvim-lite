@@ -2,8 +2,28 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
 -- Small, practical defaults.
-vim.opt.number = true
-vim.opt.relativenumber = true
+vim.opt_global.number = true
+vim.opt_global.relativenumber = true
+
+local function hide_terminal_gutter()
+  vim.opt_local.number = false
+  vim.opt_local.relativenumber = false
+end
+
+local terminal_ui_group = vim.api.nvim_create_augroup("TerminalUI", { clear = true })
+vim.api.nvim_create_autocmd({ "TermOpen", "BufWinEnter" }, {
+  group = terminal_ui_group,
+  pattern = "term://*",
+  callback = hide_terminal_gutter,
+})
+
+-- Keep re-sourcing from changing the current terminal window's UI.
+if vim.bo.buftype == "terminal" then
+  hide_terminal_gutter()
+elseif vim.bo.buftype == "" then
+  vim.opt_local.number = true
+  vim.opt_local.relativenumber = true
+end
 vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
 vim.opt.ignorecase = true
