@@ -18,6 +18,21 @@ require("diffview").setup({
 
 vim.opt.laststatus = 3
 local colors = require("tokyonight.colors").setup({ style = "moon" })
+
+local function preserve_content_tab_name(name, context)
+  local buffers = vim.fn.tabpagebuflist(context.tabnr)
+  local window_number = vim.fn.tabpagewinnr(context.tabnr)
+  local buffer = buffers[window_number]
+
+  if buffer and vim.bo[buffer].filetype ~= "neo-tree" then
+    pcall(vim.api.nvim_tabpage_set_var, context.tabId, "content_name", name)
+    return name
+  end
+
+  local ok, content_name = pcall(vim.api.nvim_tabpage_get_var, context.tabId, "content_name")
+  return ok and content_name or name
+end
+
 require("lualine").setup({
   options = {
     theme = "tokyonight",
@@ -82,6 +97,7 @@ require("lualine").setup({
         section_separators = { left = "", right = "" },
         show_modified_status = true,
         symbols = { modified = " ●" },
+        fmt = preserve_content_tab_name,
       },
     },
     lualine_b = {},
