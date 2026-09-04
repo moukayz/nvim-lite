@@ -56,6 +56,8 @@ also use `lua/config/` without sharing or colliding with these modules.
   buffer-local LSP mappings.
 - `tests/smoke.lua`: reload and invariant checks for core options, mappings,
   commands, and autocmd cardinality.
+- `tests/codex_workspace.lua`: Codex workspace layout, reload, singleton,
+  process-exit cleanup, and reopen checks with a stubbed terminal job.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does
@@ -78,8 +80,10 @@ namespace.
 6. Preserve singleton semantics:
    - Lazygit uses one terminal buffer in a centered float. Buffer-local
      `<C-g>` hides it; `<Space>gg` restores the same process; `q` exits it.
-   - Codex uses one dedicated named tab, starts in the config directory with
-     `codex resume --last`, and closes the tab when the process exits.
+   - Codex uses one dedicated `nvim-lite` tab with a tab-local config working
+     directory, a left terminal, and `init.lua` on the right. It starts with
+     `codex resume --last`; when the process exits, remove only its terminal
+     window and buffer so the editable config workspace remains open.
 7. Preserve the tmux navigation fast path. Use `vim.system()` to call tmux
    directly; do not start a shell for every pane movement.
 8. Keep repository-aware behavior explicit. General fzf searches use Neovim's
