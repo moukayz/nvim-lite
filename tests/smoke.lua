@@ -13,6 +13,7 @@ assert_equal(vim.fn.exists(":PackUpdate"), 2, "PackUpdate command")
 local expected_mappings = {
   ["<leader>."] = "Open Neovim config",
   ["<leader>rs"] = "Source Neovim config",
+  ["<leader>z"] = "Toggle window zoom",
   ["<leader>gg"] = "Lazygit",
   ["<leader>cc"] = "Codex in Neovim config",
   ["<leader>dd"] = "Open local changes",

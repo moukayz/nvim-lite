@@ -68,6 +68,8 @@ also use `lua/config/` without sharing or colliding with these modules.
   process-exit cleanup checks with a stubbed terminal job.
 - `tests/startup.lua`: directory bootstrap rendering, MRU filtering, and
   recent-file opening checks.
+- `tests/window_zoom.lua`: tab-local window zoom, reload, and exact size
+  restoration checks.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does

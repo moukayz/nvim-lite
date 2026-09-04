@@ -13,6 +13,20 @@ vim.keymap.set("n", "<leader>q", "<cmd>copen<cr>", { desc = "Open quickfix list"
 vim.keymap.set("n", "<leader>tn", "<cmd>tabnew<cr>", { desc = "New tab" })
 vim.keymap.set("n", "<leader>tc", "<cmd>tabclose<cr>", { desc = "Close tab" })
 vim.keymap.set("n", "<leader>to", "<cmd>tabonly<cr>", { desc = "Close other tabs" })
+vim.keymap.set("n", "<leader>z", function()
+  if vim.t.window_zoom_restore then
+    vim.cmd(vim.t.window_zoom_restore)
+    vim.t.window_zoom_restore = nil
+    return
+  end
+  if vim.fn.winnr("$") == 1 then
+    return
+  end
+
+  vim.t.window_zoom_restore = vim.fn.winrestcmd()
+  vim.cmd("wincmd _")
+  vim.cmd("wincmd |")
+end, { desc = "Toggle window zoom" })
 vim.keymap.set("n", "<leader>.", function()
   local config_dir = vim.fn.stdpath("config")
   vim.api.nvim_cmd({ cmd = "tabnew", args = { vim.fs.joinpath(config_dir, "init.lua") } }, {})
