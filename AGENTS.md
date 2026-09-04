@@ -17,7 +17,8 @@ init.lua
 ├── options       global defaults and terminal-local UI defaults
 ├── keymaps       general editing, tabs, reload, terminal, and tmux navigation
 ├── diagnostics   diagnostic presentation and navigation
-├── tools         Lazygit and Codex terminal lifecycle
+├── codex        Codex config-workspace layout and terminal lifecycle
+├── lazygit      Lazygit singleton floating-terminal lifecycle
 ├── plugins       vim.pack declarations and shared plugin configuration
 ├── treesitter    parsers, highlighting, and structural text objects
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
@@ -42,8 +43,10 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `lua/config/keymaps.lua`: mappings that do not belong to a plugin or
   singleton tool.
 - `lua/config/diagnostics.lua`: `vim.diagnostic` configuration and maps.
-- `lua/config/tools.lua`: terminal UI helpers and singleton Lazygit/Codex
-  launch, hide, resume, and exit behavior.
+- `lua/config/codex.lua`: Codex config-workspace layout, singleton launch,
+  resume, and exit behavior.
+- `lua/config/lazygit.lua`: Lazygit singleton floating-terminal launch, hide,
+  restore, and exit behavior.
 - `lua/config/plugins.lua`: the complete `vim.pack` source list, built-in
   optional packages, Gitsigns, Diffview commands, and which-key.
 - `lua/config/treesitter.lua`: parser installation, highlighting, and text
@@ -58,6 +61,8 @@ also use `lua/config/` without sharing or colliding with these modules.
   commands, and autocmd cardinality.
 - `tests/codex_workspace.lua`: Codex workspace layout, reload, singleton,
   process-exit cleanup, and reopen checks with a stubbed terminal job.
+- `tests/lazygit.lua`: Lazygit singleton float hide, reload, restore, and
+  process-exit cleanup checks with a stubbed terminal job.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does
