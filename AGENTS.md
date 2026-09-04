@@ -9,7 +9,7 @@ framework without an explicit request.
 
 ## Configuration architecture
 
-`init.lua` is only the entrypoint. It clears cached `nvim_lite.*` modules so
+`init.lua` is only the entrypoint. It clears cached `config.*` modules so
 `<Space>rs` performs a real reload, then loads modules in dependency order:
 
 ```text
@@ -30,32 +30,37 @@ Dependency direction must stay one-way. A later module may consume a public
 function from an earlier module, as `picker.lua` consumes `explorer.lua`, but
 earlier modules must not require later modules.
 
+The `config` namespace is intentionally profile-local. `NVIM_APPNAME=nvim-lite`
+gives this checkout its own runtime path, so a separate main Neovim profile may
+also use `lua/config/` without sharing or colliding with these modules.
+
 ## File organization
 
 - `init.lua`: module-cache reset and ordered `require()` calls only.
-- `lua/nvim_lite/options.lua`: global/window options and option-related
+- `lua/config/options.lua`: global/window options and option-related
   autocmds.
-- `lua/nvim_lite/keymaps.lua`: mappings that do not belong to a plugin or
+- `lua/config/keymaps.lua`: mappings that do not belong to a plugin or
   singleton tool.
-- `lua/nvim_lite/diagnostics.lua`: `vim.diagnostic` configuration and maps.
-- `lua/nvim_lite/tools.lua`: terminal UI helpers and singleton Lazygit/Codex
+- `lua/config/diagnostics.lua`: `vim.diagnostic` configuration and maps.
+- `lua/config/tools.lua`: terminal UI helpers and singleton Lazygit/Codex
   launch, hide, resume, and exit behavior.
-- `lua/nvim_lite/plugins.lua`: the complete `vim.pack` source list, built-in
+- `lua/config/plugins.lua`: the complete `vim.pack` source list, built-in
   optional packages, Gitsigns, Diffview commands, and which-key.
-- `lua/nvim_lite/treesitter.lua`: parser installation, highlighting, and text
+- `lua/config/treesitter.lua`: parser installation, highlighting, and text
   objects.
-- `lua/nvim_lite/ui.lua`: theme, separators, Diffview rendering, lualine, and
+- `lua/config/ui.lua`: theme, separators, Diffview rendering, lualine, and
   tab labels.
-- `lua/nvim_lite/explorer.lua`: Neo-tree and reusable repository-root logic.
-- `lua/nvim_lite/picker.lua`: fzf-lua configuration and picker actions.
-- `lua/nvim_lite/lsp.lua`: language-server discovery, configuration, and
+- `lua/config/explorer.lua`: Neo-tree and reusable repository-root logic.
+- `lua/config/picker.lua`: fzf-lua configuration and picker actions.
+- `lua/config/lsp.lua`: language-server discovery, configuration, and
   buffer-local LSP mappings.
 - `tests/smoke.lua`: reload and invariant checks for core options, mappings,
   commands, and autocmd cardinality.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does
-not fit an existing file. Keep module names under the `nvim_lite` namespace.
+not fit an existing file. Keep module names under the profile-local `config`
+namespace.
 
 ## Modification rules
 

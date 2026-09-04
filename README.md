@@ -19,7 +19,7 @@ git clone git@github.com:moukayz/nvim-lite.git ~/.config/nvim-lite
 NVIM_APPNAME=nvim-lite nvim
 ```
 
-Plugins are declared in `lua/nvim_lite/plugins.lua`; `nvim-pack-lock.json`
+Plugins are declared in `lua/config/plugins.lua`; `nvim-pack-lock.json`
 pins their resolved revisions. `init.lua` only loads the configuration modules.
 
 ## Maintenance

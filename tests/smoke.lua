@@ -11,6 +11,7 @@ assert_equal(vim.o.relativenumber, true, "relativenumber")
 assert_equal(vim.fn.exists(":PackUpdate"), 2, "PackUpdate command")
 
 local expected_mappings = {
+  ["<leader>."] = "Open Neovim config",
   ["<leader>rs"] = "Source Neovim config",
   ["<leader>gg"] = "Lazygit",
   ["<leader>cc"] = "Codex in Neovim config",

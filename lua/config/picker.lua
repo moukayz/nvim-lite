@@ -14,7 +14,7 @@ fzf.setup({
 })
 
 local function review_worktree()
-  local root = require("nvim_lite.explorer").git_root_at_cursor()
+  local root = require("config.explorer").git_root_at_cursor()
   vim.system({ "git", "-C", root, "worktree", "list", "--porcelain", "-z" }, { text = true }, function(result)
     vim.schedule(function()
       if result.code ~= 0 then
