@@ -308,6 +308,12 @@ require("gitsigns").setup({
   end,
 })
 
+vim.keymap.set("n", "<leader>dd", "<cmd>DiffviewOpen<cr>", { desc = "Open local changes" })
+vim.keymap.set("n", "<leader>dc", "<cmd>DiffviewClose<cr>", { desc = "Close Diffview" })
+vim.keymap.set("n", "<leader>df", "<cmd>DiffviewFileHistory %<cr>", { desc = "Current file history" })
+vim.keymap.set("n", "<leader>dh", "<cmd>DiffviewFileHistory<cr>", { desc = "Repository history" })
+vim.keymap.set("n", "<leader>dl", "<cmd>DiffviewOpen HEAD^!<cr>", { desc = "Latest commit changes" })
+
 vim.api.nvim_create_user_command("PackUpdate", function()
   vim.pack.update()
 end, { desc = "Review and update managed plugins" })
@@ -398,6 +404,11 @@ require("tokyonight").setup({
   end,
 })
 vim.cmd.colorscheme("tokyonight")
+
+vim.opt.fillchars:append({ diff = " " })
+require("diffview").setup({
+  enhanced_diff_hl = true,
+})
 
 vim.opt.laststatus = 3
 local statusline_colors = require("tokyonight.colors").setup({ style = "moon" })
@@ -594,6 +605,83 @@ if ok then
     },
   })
 
+  local function review_worktree()
+    local root = git_root_at_cursor()
+    vim.system({ "git", "-C", root, "worktree", "list", "--porcelain", "-z" }, { text = true }, function(result)
+      vim.schedule(function()
+        if result.code ~= 0 then
+          local message = vim.trim(result.stderr or "")
+          vim.notify(message ~= "" and message or "Could not list Git worktrees", vim.log.levels.ERROR)
+          return
+        end
+
+        local worktrees = {}
+        local current
+        local function finish_worktree()
+          if current and current.path then
+            worktrees[#worktrees + 1] = current
+          end
+          current = nil
+        end
+
+        for _, field in ipairs(vim.split(result.stdout or "", "\0", { plain = true })) do
+          if field == "" then
+            finish_worktree()
+          elseif vim.startswith(field, "worktree ") then
+            finish_worktree()
+            current = { path = field:sub(10) }
+          elseif current then
+            if vim.startswith(field, "HEAD ") then
+              current.head = field:sub(6)
+            elseif vim.startswith(field, "branch ") then
+              current.branch = field:sub(8):gsub("^refs/heads/", "")
+            elseif field == "detached" then
+              current.detached = true
+            elseif field == "bare" then
+              current.bare = true
+            end
+          end
+        end
+        finish_worktree()
+
+        if #worktrees == 0 then
+          vim.notify("No Git worktrees found", vim.log.levels.WARN)
+          return
+        end
+
+        local current_root = vim.uv.fs_realpath(root) or vim.fs.normalize(root)
+        local entries = {}
+        for index, worktree in ipairs(worktrees) do
+          local path = vim.uv.fs_realpath(worktree.path) or vim.fs.normalize(worktree.path)
+          local marker = path == current_root and "*" or " "
+          local label = worktree.branch
+            or (worktree.detached and ("detached@" .. (worktree.head or ""):sub(1, 8)))
+            or (worktree.bare and "bare")
+            or "unknown"
+          entries[index] = string.format("%d\t%s %-24s %s", index, marker, label, worktree.path)
+        end
+
+        fzf.fzf_exec(entries, {
+          prompt = "Worktrees> ",
+          fzf_opts = {
+            ["--delimiter"] = "\t",
+            ["--with-nth"] = "2..",
+          },
+          winopts = { preview = { hidden = true } },
+          actions = {
+            ["enter"] = function(selected)
+              local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
+              local worktree = index and worktrees[index]
+              if worktree then
+                vim.api.nvim_cmd({ cmd = "DiffviewOpen", args = { "-C=" .. worktree.path } }, {})
+              end
+            end,
+          },
+        })
+      end)
+    end)
+  end
+
   vim.keymap.set("n", "<leader>f", fzf.files, { desc = "Find files" })
   vim.keymap.set("n", "<leader>/", fzf.live_grep, { desc = "Search repository" })
   vim.keymap.set("n", "<leader>b", fzf.buffers, { desc = "Switch buffers" })
@@ -601,6 +689,7 @@ if ok then
   vim.keymap.set("n", "<leader>gs", fzf.git_status, { desc = "Git status" })
   vim.keymap.set("n", "<leader>gc", fzf.git_commits, { desc = "Git commits" })
   vim.keymap.set("n", "<leader>gb", fzf.git_branches, { desc = "Git branches" })
+  vim.keymap.set("n", "<leader>gw", review_worktree, { desc = "Review Git worktree changes" })
 end
 
 -- Native Neovim 0.12 LSP: no LSP framework plugin required.
