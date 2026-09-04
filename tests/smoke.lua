@@ -28,6 +28,7 @@ local expected_autocmd_counts = {
   tmux_navigation = 1,
   CodexTerminal = 1,
   LazygitTerminal = 1,
+  NvimLiteStartup = 1,
   NvimLiteTreesitter = 7,
   NvimLiteLsp = 1,
 }

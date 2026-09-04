@@ -1,5 +1,14 @@
 local M = {}
 
+local function started_with_directory()
+  if vim.fn.argc(-1) ~= 1 then
+    return false
+  end
+  local candidate = vim.fn.fnamemodify(vim.fn.argv(0), ":p")
+  local stat = vim.uv.fs_stat(candidate)
+  return stat and stat.type == "directory" or false
+end
+
 local function copy_path(state, relative)
   local node = state.tree:get_node()
   if not node.path then
@@ -59,7 +68,7 @@ require("neo-tree").setup({
     },
   },
   filesystem = {
-    hijack_netrw_behavior = "open_default",
+    hijack_netrw_behavior = started_with_directory() and "disabled" or "open_default",
     follow_current_file = {
       enabled = true,
       leave_dirs_open = false,

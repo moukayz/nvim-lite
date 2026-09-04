@@ -24,7 +24,8 @@ init.lua
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
 ├── explorer      Neo-tree configuration and Git-root resolution
 ├── picker        fzf-lua pickers; consumes explorer.git_root_at_cursor()
-└── lsp           native Neovim LSP configuration and LspAttach mappings
+├── lsp           native Neovim LSP configuration and LspAttach mappings
+└── startup       directory bootstrap page with project-local recent files
 ```
 
 Dependency direction must stay one-way. A later module may consume a public
@@ -57,12 +58,16 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `lua/config/picker.lua`: fzf-lua configuration and picker actions.
 - `lua/config/lsp.lua`: language-server discovery, configuration, and
   buffer-local LSP mappings.
+- `lua/config/startup.lua`: native directory-startup page and project-local
+  recent-file navigation.
 - `tests/smoke.lua`: reload and invariant checks for core options, mappings,
   commands, and autocmd cardinality.
 - `tests/codex_workspace.lua`: Codex workspace layout, reload, singleton,
   process-exit cleanup, and reopen checks with a stubbed terminal job.
 - `tests/lazygit.lua`: Lazygit singleton float hide, reload, restore, and
   process-exit cleanup checks with a stubbed terminal job.
+- `tests/startup.lua`: directory bootstrap rendering, MRU filtering, and
+  recent-file opening checks.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does

@@ -85,6 +85,9 @@ require("lualine").setup({
     icons_enabled = false,
     globalstatus = true,
     always_show_tabline = false,
+    disabled_filetypes = {
+      winbar = { "nvim-lite-start" },
+    },
     component_separators = { left = "│", right = "│" },
     section_separators = { left = "", right = "" },
   },
