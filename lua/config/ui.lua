@@ -18,6 +18,23 @@ vim.opt.fillchars:append({ diff = " " })
 require("diffview").setup({
   enhanced_diff_hl = true,
 })
+local diffview_panel_colors = {
+  DiffviewFilePanelInsertions = colors.green,
+  DiffviewFilePanelDeletions = colors.red,
+  DiffviewStatusAdded = colors.green,
+  DiffviewStatusUntracked = colors.green,
+  DiffviewStatusModified = colors.blue,
+  DiffviewStatusRenamed = colors.blue,
+  DiffviewStatusCopied = colors.blue,
+  DiffviewStatusTypeChanged = colors.blue,
+  DiffviewStatusUnmerged = colors.yellow,
+  DiffviewStatusUnknown = colors.red,
+  DiffviewStatusDeleted = colors.red,
+  DiffviewStatusBroken = colors.red,
+}
+for group, foreground in pairs(diffview_panel_colors) do
+  vim.api.nvim_set_hl(0, group, { fg = foreground })
+end
 
 vim.opt.laststatus = 3
 
