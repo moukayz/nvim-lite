@@ -18,10 +18,11 @@ init.lua
 ├── keymaps       general editing, tabs, reload, terminal, and tmux navigation
 ├── diagnostics   diagnostic presentation and navigation
 ├── codex        Codex config-workspace layout and terminal lifecycle
-├── lazygit      Lazygit singleton floating-terminal lifecycle
 ├── plugins       vim.pack declarations and shared plugin configuration
 ├── treesitter    parsers, highlighting, and structural text objects
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
+├── yadm          context-specific handlers injected by init.lua
+├── lazygit       singleton floating-terminal lifecycle
 ├── explorer      Neo-tree configuration and Git-root resolution
 ├── picker        fzf-lua pickers; consumes explorer.git_root_at_cursor()
 ├── lsp           native Neovim LSP configuration and LspAttach mappings
@@ -31,6 +32,9 @@ init.lua
 Dependency direction must stay one-way. A later module may consume a public
 function from an earlier module, as `picker.lua` consumes `explorer.lua`, but
 earlier modules must not require later modules.
+The entrypoint loads yadm first, then sets up the three tools in the
+order above. Tools never import the integration. Each keymap has one owner in
+its tool module; integrations contain no keymap definitions.
 
 The `config` namespace is intentionally profile-local. `NVIM_APPNAME=nvim-lite`
 gives this checkout its own runtime path, so a separate main Neovim profile may
@@ -38,7 +42,8 @@ also use `lua/config/` without sharing or colliding with these modules.
 
 ## File organization
 
-- `init.lua`: module-cache reset and ordered `require()` calls only.
+- `init.lua`: module-cache reset, ordered module loading, and explicit `setup()`
+  wiring. Keep feature logic and keymap definitions in their owning modules.
 - `lua/config/options.lua`: global/window options and option-related
   autocmds.
 - `lua/config/keymaps.lua`: mappings that do not belong to a plugin or
@@ -47,7 +52,7 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `lua/config/codex.lua`: Codex config-workspace layout, singleton launch,
   resume, and exit behavior.
 - `lua/config/lazygit.lua`: Lazygit singleton floating-terminal launch, hide,
-  restore, and exit behavior.
+     restore, and exit behavior.
 - `lua/config/plugins.lua`: the complete `vim.pack` source list, built-in
   optional packages, Gitsigns, Diffview commands, and which-key.
 - `lua/config/treesitter.lua`: parser installation, highlighting, and text
@@ -56,6 +61,10 @@ also use `lua/config/` without sharing or colliding with these modules.
   tab labels.
 - `lua/config/explorer.lua`: Neo-tree and reusable repository-root logic.
 - `lua/config/picker.lua`: fzf-lua configuration and picker actions.
+- `lua/config/yadm.lua`: yadm context, async dotfiles picker, tree selection and
+  Lazygit argument policy. The source adapter below consumes its context API.
+- `lua/config/yadm_tree.lua`: Neo-tree tracked-dotfiles source; builds parent
+  directories from `yadm ls-files` without scanning home. Browse/open/refresh only.
 - `lua/config/lsp.lua`: language-server discovery, configuration, and
   buffer-local LSP mappings.
 - `lua/config/startup.lua`: native directory-startup page and project-local
@@ -70,6 +79,10 @@ also use `lua/config/` without sharing or colliding with these modules.
   recent-file opening checks.
 - `tests/window_zoom.lua`: tab-local window zoom, reload, and exact size
   restoration checks.
+- `tests/picker.lua`: yadm-context file picker and ordinary-project fallback.
+- `tests/yadm_tree.lua`: real Neo-tree rendering, opening, toggle and reload checks.
+- `tests/integrations.lua`: generic setup defaults, injection, and single mapping ownership.
+- `tests/treesitter.lua`: CLI bootstrap success/failure, installer selection and reload guards.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does
@@ -92,6 +105,9 @@ namespace.
 6. Preserve singleton semantics:
    - Lazygit uses one terminal buffer in a centered float. Buffer-local
      `<C-g>` hides it; `<Space>gg` restores the same process; `q` exits it.
+     In inherited yadm context, explicitly pass the user Lazygit config from
+     `$XDG_CONFIG_HOME/lazygit/config.yml` (default `~/.config/lazygit/config.yml`).
+     Ordinary projects retain automatic config discovery.
    - Codex uses one dedicated `nvim-lite` tab with a tab-local config working
      directory, a left terminal, and `init.lua` on the right. It starts with
      `codex resume --last`; when the process exits, remove only its terminal
@@ -101,10 +117,30 @@ namespace.
 8. Keep repository-aware behavior explicit. General fzf searches use Neovim's
    current working directory; Neo-tree and worktree review use
    `explorer.git_root_at_cursor()`.
+   Exception: `<Space>f` in an inherited yadm Git context lists only yadm-tracked
+   files, rooted at `GIT_WORK_TREE`. Detect it by canonical `GIT_DIR` matching
+   `yadm introspect repo`; browsing home alone must not activate this behavior.
+   `<Space>ee` uses the same detection to toggle the yadm source; normal sessions
+   retain the filesystem source. `R` refreshes tracked entries after yadm add/remove.
+   Cache successful yadm context checks until cwd/environment changes or config
+   reload. Tree listings use asynchronous Git with explicit repository/worktree;
+   late results must not reopen closed windows or overwrite newer refreshes.
+   The yadm file picker also lists via asynchronous Git, preserving exact NUL-
+   delimited paths; ignore stale results after reload, repeat invocation or a
+   window/buffer/context change.
 9. Keep edits scoped and preserve unrelated working-tree changes. Review
    `git status --short` and `git diff` before committing.
 10. Make focused commits. Do not combine plugin installation, behavioral
     changes, and broad refactoring unless the user requests that grouping.
+11. Missing Tree-sitter CLI is installed asynchronously before missing parsers:
+    Homebrew, otherwise profile-local npm/Cargo. Never sudo from Neovim; attempt
+    once per process, preserve the guard across reloads, and report failures.
+12. Tool setup APIs are explicit, not a registry: `picker.setup({find_files})`
+    and `explorer.setup({sources, toggle_tree})` accept handlers returning true
+    when handled and false/nil for normal fallback. Lazygit accepts
+    `setup({launch_args})`: nil uses defaults, an argv list appends arguments,
+    false cancels a new launch. Resolve only for new jobs, never on restore.
+    Repeated setup replaces handlers; Neo-tree is configured once per reload.
 
 ## Validation
 

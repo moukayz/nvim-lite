@@ -3,9 +3,11 @@ local function assert_equal(actual, expected, label)
 end
 
 local starts = 0
+local expected_command = { "lazygit" }
+require("config.yadm").work_tree = function() return nil end
 vim.fn.jobstart = function(command, options)
   starts = starts + 1
-  assert(vim.deep_equal(command, { "lazygit" }), "unexpected Lazygit command")
+  assert(vim.deep_equal(command, expected_command), "unexpected Lazygit command: " .. vim.inspect(command))
   assert_equal(options.term, true, "terminal job")
   return starts
 end
@@ -35,6 +37,35 @@ autocmd.callback({ buf = lazygit_buffer })
 assert(vim.wait(1000, function()
   return not vim.api.nvim_buf_is_valid(lazygit_buffer)
 end), "Lazygit terminal cleanup timed out")
+
+-- A fresh yadm launch explicitly loads the user's config, while restore still
+-- reuses the same process. No filesystem/config writes are needed for this test.
+require("config.yadm").work_tree = function() return vim.env.HOME end
+local original_readable = vim.fn.filereadable
+local original_xdg = vim.env.XDG_CONFIG_HOME
+vim.env.XDG_CONFIG_HOME = "/test/config with spaces"
+expected_command = { "lazygit", "--use-config-file", "/test/config with spaces/lazygit/config.yml" }
+vim.fn.filereadable = function(path)
+  if path == expected_command[3] then return 1 end
+  return original_readable(path)
+end
+mapping.callback()
+local yadm_buffer = vim.api.nvim_get_current_buf()
+assert_equal(starts, 2, "yadm starts")
+vim.fn.maparg("<C-g>", "n", false, true).callback()
+mapping.callback()
+assert_equal(starts, 2, "yadm restore starts")
+assert_equal(vim.api.nvim_get_current_buf(), yadm_buffer, "yadm restored buffer")
+autocmd.callback({ buf = yadm_buffer })
+assert(vim.wait(1000, function() return not vim.api.nvim_buf_is_valid(yadm_buffer) end))
+vim.env.XDG_CONFIG_HOME = nil
+expected_command[3] = vim.fs.joinpath(vim.env.HOME, ".config/lazygit/config.yml")
+mapping.callback()
+assert_equal(starts, 3, "home config fallback starts")
+autocmd.callback({ buf = vim.api.nvim_get_current_buf() })
+assert(vim.wait(1000, function() return #vim.api.nvim_list_wins() == 1 end))
+vim.fn.filereadable = original_readable
+vim.env.XDG_CONFIG_HOME = original_xdg
 
 print("nvim-lite Lazygit: ok")
 vim.cmd("qa!")

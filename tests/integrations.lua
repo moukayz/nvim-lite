@@ -1,0 +1,28 @@
+-- Run after loading the full profile.
+local picker = require("config.picker")
+local fzf = require("fzf-lua")
+local old_files, count = fzf.files, 0
+fzf.files = function() count = count + 1 end
+picker.setup({ find_files = function() return true end })
+vim.fn.maparg("<leader>f", "n", false, true).callback()
+assert(count == 0, "injected handler did not handle request")
+picker.setup({ find_files = function() return false end })
+vim.fn.maparg("<leader>f", "n", false, true).callback()
+assert(count == 1, "normal fallback was skipped")
+picker.setup()
+vim.fn.maparg("<leader>f", "n", false, true).callback()
+assert(count == 2, "setup did not clear old handler")
+fzf.files = old_files
+for _, key in ipairs({ " f", " ee", " gg" }) do
+  local matches = vim.tbl_filter(function(map) return map.lhs == key end, vim.api.nvim_get_keymap("n"))
+  assert(#matches == 1, "mapping must have one owner: " .. key)
+end
+for _, name in ipairs({ "picker", "explorer", "lazygit" }) do
+  local source = table.concat(vim.fn.readfile("lua/config/" .. name .. ".lua"), "\n")
+  assert(not source:find("yadm", 1, true), "integration leaked into " .. name)
+end
+vim.cmd.source(vim.env.MYVIMRC)
+assert(package.loaded["config.integrations"] == nil, "entrypoint should wire tools directly")
+assert(vim.fn.filereadable("lua/config/integrations.lua") == 0, "redundant wiring module remains")
+print("nvim-lite integrations: ok")
+vim.cmd("qa!")
