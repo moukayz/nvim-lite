@@ -30,6 +30,7 @@ else
 end
 
 require("gitsigns").setup({
+  current_line_blame = true,
   on_attach = function(bufnr)
     local gitsigns = require("gitsigns")
     local function map(mode, lhs, rhs, desc)
@@ -52,6 +53,9 @@ require("gitsigns").setup({
     end, "Previous Git hunk")
 
     map("n", "<leader>hp", gitsigns.preview_hunk_inline, "Preview Git hunk")
+    map("n", "<leader>hb", function()
+      gitsigns.blame()
+    end, "Blame file")
     map("n", "<leader>hs", gitsigns.stage_hunk, "Stage Git hunk")
     map("n", "<leader>hr", gitsigns.reset_hunk, "Reset Git hunk")
   end,
