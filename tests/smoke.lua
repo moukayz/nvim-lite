@@ -27,6 +27,7 @@ end
 
 local expected_autocmd_counts = {
   TerminalUI = 2,
+  FileGutter = 1,
   tmux_navigation = 1,
   CodexTerminal = 1,
   LazygitTerminal = 1,

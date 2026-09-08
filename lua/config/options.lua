@@ -4,25 +4,36 @@ vim.g.maplocalleader = " "
 vim.opt_global.number = true
 vim.opt_global.relativenumber = true
 
-local function hide_terminal_gutter()
+local function hide_number_column()
   vim.opt_local.number = false
   vim.opt_local.relativenumber = false
+end
+
+local function configure_window_gutter()
+  if vim.bo.buftype == "terminal" or vim.bo.filetype == "nvim-lite-start" then
+    hide_number_column()
+  elseif vim.bo.buftype == "" then
+    vim.opt_local.number = true
+    vim.opt_local.relativenumber = true
+    vim.opt_local.signcolumn = "yes"
+  end
 end
 
 local terminal_ui_group = vim.api.nvim_create_augroup("TerminalUI", { clear = true })
 vim.api.nvim_create_autocmd({ "TermOpen", "BufWinEnter" }, {
   group = terminal_ui_group,
   pattern = "term://*",
-  callback = hide_terminal_gutter,
+  callback = hide_number_column,
 })
 
--- Keep re-sourcing from changing the current terminal window's UI.
-if vim.bo.buftype == "terminal" then
-  hide_terminal_gutter()
-elseif vim.bo.buftype == "" then
-  vim.opt_local.number = true
-  vim.opt_local.relativenumber = true
-end
+local file_gutter_group = vim.api.nvim_create_augroup("FileGutter", { clear = true })
+vim.api.nvim_create_autocmd("BufWinEnter", {
+  group = file_gutter_group,
+  callback = configure_window_gutter,
+})
+
+-- Apply the policy immediately when the config is re-sourced.
+configure_window_gutter()
 
 vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
