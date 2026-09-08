@@ -93,6 +93,7 @@ end
 vim.keymap.set("n", "<leader>f", fzf.files, { desc = "Find files" })
 vim.keymap.set("n", "<leader>/", fzf.live_grep, { desc = "Search repository" })
 vim.keymap.set("n", "<leader>b", fzf.buffers, { desc = "Switch buffers" })
+vim.keymap.set("n", "<leader>w", fzf.tabs, { desc = "Switch windows across tabs" })
 vim.keymap.set("n", "<leader>sw", fzf.grep_cword, { desc = "Search word under cursor" })
 vim.keymap.set("n", "<leader>gs", fzf.git_status, { desc = "Git status" })
 vim.keymap.set("n", "<leader>gc", fzf.git_commits, { desc = "Git commits" })

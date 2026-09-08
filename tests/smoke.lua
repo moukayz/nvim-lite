@@ -19,6 +19,7 @@ local expected_mappings = {
   ["<leader>dd"] = "Open local changes",
   ["<leader>ee"] = "Toggle file tree",
   ["<leader>f"] = "Find files",
+  ["<leader>w"] = "Switch windows across tabs",
 }
 for lhs, description in pairs(expected_mappings) do
   assert_equal(vim.fn.maparg(lhs, "n", false, true).desc, description, lhs)
