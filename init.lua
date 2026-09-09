@@ -19,8 +19,11 @@ require("config.treesitter")
 require("config.ui")
 -- Tools own their keymaps; the entrypoint injects context-specific behavior.
 local yadm = require("config.yadm")
-require("config.lazygit").setup({ launch_args = yadm.lazygit_args })
 require("config.explorer").setup({ sources = { "config.yadm_tree" }, toggle_tree = yadm.toggle_tree })
+require("config.lazygit").setup({
+  launch_args = yadm.lazygit_args,
+  cwd = function() return yadm.work_tree() or require("config.explorer").git_root_at_cursor() end,
+})
 require("config.picker").setup({ find_files = yadm.find_files })
 require("config.lsp")
 require("config.startup")

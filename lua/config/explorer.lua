@@ -97,7 +97,7 @@ function M.setup(options)
       candidate = vim.api.nvim_buf_get_name(0)
     end
     if not candidate or candidate == "" then
-      candidate = vim.fn.getcwd(-1, -1)
+      candidate = vim.fn.getcwd()
     end
 
     local stat = vim.uv.fs_stat(candidate)

@@ -2,10 +2,10 @@ local M = {}
 
 function M.setup(options)
   options = options or {}
-  local function find_marked_buffer(marker)
+  local function find_repo_buffer(repo)
     for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
-      local marker_ok, is_marked = pcall(vim.api.nvim_buf_get_var, buffer, marker)
-      if marker_ok and is_marked then
+      if vim.b[buffer].lazygit_buffer and vim.b[buffer].lazygit_repo == repo
+          and not vim.b[buffer].lazygit_exited then
         return buffer
       end
     end
@@ -47,6 +47,7 @@ function M.setup(options)
       if not marker_ok or not is_lazygit_buffer then
         return
       end
+      vim.b[event.buf].lazygit_exited = true
 
       vim.schedule(function()
         for _, win in ipairs(vim.fn.win_findbuf(event.buf)) do
@@ -61,17 +62,37 @@ function M.setup(options)
     end,
   })
 
-  local existing_lazygit_buffer = find_marked_buffer("lazygit_buffer")
-  if existing_lazygit_buffer then
-    configure_lazygit_buffer(existing_lazygit_buffer)
+  for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.b[buffer].lazygit_buffer then configure_lazygit_buffer(buffer) end
   end
 
   vim.keymap.set("n", "<leader>gg", function()
-    local buffer = find_marked_buffer("lazygit_buffer")
+    if vim.b.lazygit_buffer and not vim.b.lazygit_exited then
+      vim.cmd("startinsert")
+      return
+    end
+    local cwd = options.cwd and options.cwd() or vim.fn.getcwd()
+    -- The Git directory distinguishes repositories, submodules, worktrees, and
+    -- inherited Git contexts. Subdirectories share one instance.
+    local result = vim.system({ "git", "-C", cwd, "rev-parse", "--absolute-git-dir" },
+      { text = true }):wait(2000)
+    if result.code ~= 0 then
+      vim.notify("Could not resolve Lazygit repository:\n" .. (result.stderr or ""), vim.log.levels.ERROR)
+      return
+    end
+    local git_dir = (result.stdout or ""):gsub("\n$", "")
+    local repo = vim.uv.fs_realpath(git_dir) or git_dir
+    local buffer = find_repo_buffer(repo)
     if buffer then
-      local win = vim.fn.win_findbuf(buffer)[1]
-      if win and vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_set_current_tabpage(vim.api.nvim_win_get_tabpage(win))
+      local win
+      for _, candidate in ipairs(vim.fn.win_findbuf(buffer)) do
+        if vim.api.nvim_win_get_tabpage(candidate) == vim.api.nvim_get_current_tabpage() then
+          win = candidate
+        else
+          vim.api.nvim_win_close(candidate, true)
+        end
+      end
+      if win then
         vim.api.nvim_set_current_win(win)
       else
         open_lazygit_float(buffer)
@@ -87,9 +108,10 @@ function M.setup(options)
 
     buffer = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_var(buffer, "lazygit_buffer", true)
+    vim.b[buffer].lazygit_repo = repo
     configure_lazygit_buffer(buffer)
     open_lazygit_float(buffer)
-    local job = vim.fn.jobstart(command, { term = true })
+    local job = vim.fn.jobstart(command, { term = true, cwd = cwd })
     if job <= 0 then
       vim.api.nvim_buf_delete(buffer, { force = true })
       vim.notify("Could not start Lazygit", vim.log.levels.ERROR)

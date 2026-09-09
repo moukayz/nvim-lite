@@ -23,8 +23,8 @@ init.lua
 ├── treesitter    parsers, highlighting, and structural text objects
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
 ├── yadm          context-specific handlers injected by init.lua
-├── lazygit       singleton floating-terminal lifecycle
 ├── explorer      Neo-tree configuration and Git-root resolution
+├── lazygit       per-repository floating-terminal lifecycle
 ├── picker        fzf-lua pickers; consumes explorer.git_root_at_cursor()
 ├── lsp           native Neovim LSP configuration and LspAttach mappings
 └── startup       directory bootstrap page with project-local recent files
@@ -54,7 +54,7 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `lua/config/diagnostics.lua`: `vim.diagnostic` configuration and maps.
 - `lua/config/codex.lua`: Codex config-workspace layout, singleton launch,
   resume, and exit behavior.
-- `lua/config/lazygit.lua`: Lazygit singleton floating-terminal launch, hide,
+- `lua/config/lazygit.lua`: Lazygit per-repository floating-terminal launch, hide,
      restore, and exit behavior.
 - `lua/config/plugins.lua`: the complete `vim.pack` source list, built-in
   optional packages, Gitsigns, Diffview commands, and which-key.
@@ -78,6 +78,8 @@ also use `lua/config/` without sharing or colliding with these modules.
   process-exit cleanup, and reopen checks with a stubbed terminal job.
 - `tests/lazygit.lua`: Lazygit singleton float hide, reload, restore, and
   process-exit cleanup checks with a stubbed terminal job.
+- `tests/lazygit_repos.lua`: real Git identity and tab-local cwd resolution,
+  cross-tab reuse, per-repository isolation, reload, and exit/reopen checks.
 - `tests/startup.lua`: directory bootstrap rendering, MRU filtering, and
   recent-file opening checks.
 - `tests/window_zoom.lua`: tab-local window zoom, reload, and exact size
@@ -106,11 +108,15 @@ namespace.
    exit. Use buffer/tab variables as identity markers. Do not assign a fixed
    terminal buffer name: hidden named buffers can cause `E95` on reopen.
 6. Preserve singleton semantics:
-   - Lazygit uses one terminal buffer in a centered float. Buffer-local
+   - Lazygit uses one terminal buffer per Git directory in a centered float. Buffer-local
      `<C-g>` hides it; `<Space>gg` restores the same process; `q` exits it.
      In inherited yadm context, explicitly pass the user Lazygit config from
      `$XDG_CONFIG_HOME/lazygit/config.yml` (default `~/.config/lazygit/config.yml`).
      Ordinary projects retain automatic config discovery.
+     Reuse is keyed by canonical Git directory, not a global singleton or cwd
+     string. Worktrees and submodules have distinct instances. Launch in the
+     selected file's repo, falling back to effective tab/window cwd for terminals.
+     Restore floats in the invoking tab without restarting their processes.
    - Codex uses one dedicated `nvim-lite` tab with a tab-local config working
      directory, a left terminal, and `init.lua` on the right. It starts with
      `codex resume --last`; when the process exits, remove only its terminal
@@ -141,8 +147,10 @@ namespace.
 12. Tool setup APIs are explicit, not a registry: `picker.setup({find_files})`
     and `explorer.setup({sources, toggle_tree})` accept handlers returning true
     when handled and false/nil for normal fallback. Lazygit accepts
-    `setup({launch_args})`: nil uses defaults, an argv list appends arguments,
-    false cancels a new launch. Resolve only for new jobs, never on restore.
+    `setup({launch_args, cwd})`: launch_args returning nil uses defaults, an argv
+    list appends arguments, false cancels a new launch. Resolve launch_args only
+    for new jobs. The cwd resolver runs on invocation before repository lookup;
+    init.lua injects yadm/root policy after explorer has loaded.
     Repeated setup replaces handlers; Neo-tree is configured once per reload.
 
 ## Validation

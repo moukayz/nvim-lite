@@ -4,6 +4,13 @@ end
 
 local starts = 0
 local expected_command = { "lazygit" }
+local real_system = vim.system
+vim.system = function(argv, opts, callback)
+  if argv[4] == "rev-parse" and #expected_command > 1 then
+    return { wait = function() return { code = 0, stdout = "/test/yadm.git\n" } end }
+  end
+  return real_system(argv, opts, callback)
+end
 require("config.yadm").work_tree = function() return nil end
 vim.fn.jobstart = function(command, options)
   starts = starts + 1
