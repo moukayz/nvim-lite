@@ -38,16 +38,7 @@ vim.keymap.set("t", "<A-h>", "<cmd>tabprevious<cr>", { desc = "Previous tab" })
 vim.keymap.set("t", "<A-l>", "<cmd>tabnext<cr>", { desc = "Next tab" })
 vim.keymap.set("n", "<leader>rr", "<cmd>restart<cr>", { desc = "Restart Neovim" })
 vim.keymap.set("n", "<leader>rs", function()
-  local config_path = vim.env.MYVIMRC or (vim.fn.stdpath("config") .. "/init.lua")
-  local ok, error_message = pcall(vim.api.nvim_cmd, {
-    cmd = "source",
-    args = { config_path },
-  }, {})
-  if ok then
-    vim.notify("Neovim config reloaded", vim.log.levels.INFO)
-  else
-    vim.notify("Neovim config reload failed:\n" .. error_message, vim.log.levels.ERROR)
-  end
+  require("config.config_update").reload()
 end, { desc = "Source Neovim config" })
 vim.keymap.set("n", "<A-t>", function()
   vim.cmd("belowright split")

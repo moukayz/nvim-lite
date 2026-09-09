@@ -10,6 +10,7 @@ for _, module_name in ipairs(config_modules) do
 end
 
 require("config.options")
+require("config.config_update")
 require("config.keymaps")
 require("config.diagnostics")
 require("config.codex")

@@ -35,7 +35,7 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
 -- Apply the policy immediately when the config is re-sourced.
 configure_window_gutter()
 
-vim.opt.mouse = "a"
+vim.opt.mouse = ""
 vim.opt.clipboard = "unnamedplus"
 vim.opt.ignorecase = true
 vim.opt.smartcase = true

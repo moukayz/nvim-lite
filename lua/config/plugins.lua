@@ -3,6 +3,9 @@ local managed_plugins = {
   { src = "https://github.com/lewis6991/gitsigns.nvim" },
   { src = "https://github.com/sindrets/diffview.nvim" },
   { src = "https://github.com/folke/tokyonight.nvim" },
+  { src = "https://github.com/catppuccin/nvim", name = "catppuccin" },
+  { src = "https://github.com/rose-pine/neovim", name = "rose-pine" },
+  { src = "https://github.com/projekt0n/github-nvim-theme" },
   { src = "https://github.com/nvim-lualine/lualine.nvim" },
   { src = "https://github.com/nvim-neo-tree/neo-tree.nvim", version = vim.version.range("3") },
   { src = "https://github.com/nvim-lua/plenary.nvim" },
@@ -20,7 +23,7 @@ else
   -- Neovim process installs a plugin, load it directly if already on disk.
   local plugin_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "site", "pack", "core", "opt")
   for _, plugin in ipairs(managed_plugins) do
-    local name = vim.fs.basename(plugin.src):gsub("%.git$", "")
+    local name = plugin.name or vim.fs.basename(plugin.src):gsub("%.git$", "")
     if vim.uv.fs_stat(vim.fs.joinpath(plugin_dir, name)) then
       vim.cmd.packadd({ name, magic = { file = false } })
     else

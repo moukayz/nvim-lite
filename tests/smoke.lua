@@ -8,6 +8,7 @@ vim.cmd.source(vim.env.MYVIMRC)
 assert_equal(vim.g.mapleader, " ", "leader")
 assert_equal(vim.o.number, true, "number")
 assert_equal(vim.o.relativenumber, true, "relativenumber")
+assert_equal(vim.o.mouse, "", "mouse disabled")
 assert_equal(vim.fn.exists(":PackUpdate"), 2, "PackUpdate command")
 
 local expected_mappings = {

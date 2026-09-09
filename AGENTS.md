@@ -15,6 +15,7 @@ framework without an explicit request.
 ```text
 init.lua
 ├── options       global defaults and terminal-local UI defaults
+├── config_update config repository update command and shared reload helper
 ├── keymaps       general editing, tabs, reload, terminal, and tmux navigation
 ├── diagnostics   diagnostic presentation and navigation
 ├── codex        Codex config-workspace layout and terminal lifecycle
@@ -48,6 +49,8 @@ also use `lua/config/` without sharing or colliding with these modules.
   autocmds.
 - `lua/config/keymaps.lua`: mappings that do not belong to a plugin or
   singleton tool.
+- `lua/config/config_update.lua`: asynchronous config pull command and reload helper;
+  loaded before keymaps, which owns the reload shortcut.
 - `lua/config/diagnostics.lua`: `vim.diagnostic` configuration and maps.
 - `lua/config/codex.lua`: Codex config-workspace layout, singleton launch,
   resume, and exit behavior.
