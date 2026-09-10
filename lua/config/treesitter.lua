@@ -2,6 +2,8 @@ local parsers = {
   "c",
   "cpp",
   "javascript",
+  "markdown",
+  "markdown_inline",
   "python",
   "tsx",
   "typescript",

@@ -1,5 +1,23 @@
 local config_dir = vim.fn.stdpath("config")
 local config_init = vim.fs.joinpath(config_dir, "init.lua")
+local default_command = { "codex", "-c", "tui.notifications=false", "resume", "--last" }
+
+-- Migrate existing sessions from the former Codex-specific identity on reload.
+pcall(vim.api.nvim_del_augroup_by_name, "CodexTerminal")
+pcall(vim.api.nvim_del_augroup_by_name, "AgentTerminal")
+for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+  if vim.t[tab].codex_config_tab or vim.t[tab].agent_config_tab then
+    vim.t[tab].config_workspace_tab, vim.t[tab].codex_config_tab = true, nil
+    vim.t[tab].agent_config_tab = nil
+  end
+end
+for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+  if vim.b[buf].codex_config_buffer or vim.b[buf].agent_config_buffer then
+    vim.b[buf].config_agent_buffer, vim.b[buf].codex_config_buffer = true, nil
+    vim.b[buf].agent_config_buffer = nil
+  end
+  if vim.b[buf].config_agent_buffer then vim.bo[buf].bufhidden = "wipe" end
+end
 
 local function in_tab(tab, callback)
   local original_tab = vim.api.nvim_get_current_tabpage()
@@ -40,9 +58,9 @@ local function find_marked_tab(tab_marker, buffer_marker)
   end
 end
 
-local function configure_codex_tab(tab)
-  vim.api.nvim_tabpage_set_var(tab, "codex_config_tab", true)
-  vim.api.nvim_tabpage_set_var(tab, "tabname", "nvim-lite")
+local function configure_config_tab(tab)
+  vim.api.nvim_tabpage_set_var(tab, "config_workspace_tab", true)
+  vim.api.nvim_tabpage_set_var(tab, "tabname", "Nvim Config")
   in_tab(tab, function()
     vim.api.nvim_cmd({ cmd = "tcd", args = { config_dir } }, {})
   end)
@@ -74,14 +92,14 @@ local function ensure_config_window(tab, terminal_win)
   return config_win
 end
 
-local function focus_codex_terminal(tab, win)
+local function focus_agent_terminal(tab, win)
   vim.api.nvim_set_current_tabpage(tab)
   vim.api.nvim_set_current_win(win)
   vim.cmd("startinsert")
 end
 
-local function start_codex_terminal(tab)
-  configure_codex_tab(tab)
+local function start_agent_terminal(tab)
+  configure_config_tab(tab)
   local config_win = ensure_config_window(tab)
   vim.api.nvim_set_current_tabpage(tab)
   vim.api.nvim_set_current_win(config_win)
@@ -90,7 +108,7 @@ local function start_codex_terminal(tab)
   local terminal_win = vim.api.nvim_get_current_win()
   local terminal_buffer = vim.api.nvim_get_current_buf()
   -- Disable terminal notifications here; the external desktop hook is unchanged.
-  local job = vim.fn.jobstart({ "codex", "-c", "tui.notifications=false", "resume", "--last" }, {
+  local job = vim.fn.jobstart(vim.g.agent_command or default_command, {
     term = true,
     cwd = config_dir,
   })
@@ -99,28 +117,30 @@ local function start_codex_terminal(tab)
     if vim.api.nvim_buf_is_valid(terminal_buffer) then
       vim.api.nvim_buf_delete(terminal_buffer, { force = true })
     end
-    vim.notify("Could not start Codex CLI", vim.log.levels.ERROR)
+    vim.notify("Could not start Agent CLI", vim.log.levels.ERROR)
     return
   end
 
-  vim.api.nvim_buf_set_var(terminal_buffer, "codex_config_buffer", true)
-  focus_codex_terminal(tab, terminal_win)
+  vim.api.nvim_buf_set_var(terminal_buffer, "config_agent_buffer", true)
+  -- Wiping a terminal buffer also stops its job when its last window closes.
+  vim.bo[terminal_buffer].bufhidden = "wipe"
+  focus_agent_terminal(tab, terminal_win)
 end
 
-local codex_terminal_group = vim.api.nvim_create_augroup("CodexTerminal", { clear = true })
+local agent_terminal_group = vim.api.nvim_create_augroup("ConfigAgentTerminal", { clear = true })
 vim.api.nvim_create_autocmd("TermClose", {
-  group = codex_terminal_group,
+  group = agent_terminal_group,
   callback = function(event)
-    local marker_ok, is_codex_buffer = pcall(vim.api.nvim_buf_get_var, event.buf, "codex_config_buffer")
-    if not marker_ok or not is_codex_buffer then
+    local marker_ok, is_agent_buffer = pcall(vim.api.nvim_buf_get_var, event.buf, "config_agent_buffer")
+    if not marker_ok or not is_agent_buffer then
       return
     end
 
     vim.schedule(function()
-      local tab = find_marked_tab("codex_config_tab")
+      local tab = find_marked_tab("config_workspace_tab")
       if tab and vim.api.nvim_tabpage_is_valid(tab) then
-        configure_codex_tab(tab)
-        ensure_config_window(tab, get_marked_window(tab, "codex_config_buffer"))
+        configure_config_tab(tab)
+        ensure_config_window(tab, get_marked_window(tab, "config_agent_buffer"))
       end
       for _, win in ipairs(vim.fn.win_findbuf(event.buf)) do
         if vim.api.nvim_win_is_valid(win) then
@@ -134,31 +154,31 @@ vim.api.nvim_create_autocmd("TermClose", {
   end,
 })
 
-local existing_codex_tab, existing_codex_win = find_marked_tab("codex_config_tab", "codex_config_buffer")
-if existing_codex_tab then
-  configure_codex_tab(existing_codex_tab)
-  ensure_config_window(existing_codex_tab, existing_codex_win)
+local existing_agent_tab, existing_agent_win = find_marked_tab("config_workspace_tab", "config_agent_buffer")
+if existing_agent_tab then
+  configure_config_tab(existing_agent_tab)
+  ensure_config_window(existing_agent_tab, existing_agent_win)
 end
 
-local stale_codex_buffer = vim.fn.bufnr("Codex: nvim-lite")
-if stale_codex_buffer >= 0 and #vim.fn.win_findbuf(stale_codex_buffer) == 0 then
-  vim.api.nvim_buf_delete(stale_codex_buffer, { force = true })
+local stale_agent_buffer = vim.fn.bufnr("Codex: nvim-lite")
+if stale_agent_buffer >= 0 and #vim.fn.win_findbuf(stale_agent_buffer) == 0 then
+  vim.api.nvim_buf_delete(stale_agent_buffer, { force = true })
 end
 
 vim.keymap.set("n", "<leader>cc", function()
-  local tab, win = find_marked_tab("codex_config_tab", "codex_config_buffer")
+  local tab, win = find_marked_tab("config_workspace_tab", "config_agent_buffer")
   if tab then
-    configure_codex_tab(tab)
+    configure_config_tab(tab)
     ensure_config_window(tab, win)
     if win then
-      focus_codex_terminal(tab, win)
+      focus_agent_terminal(tab, win)
     else
-      start_codex_terminal(tab)
+      start_agent_terminal(tab)
     end
     return
   end
 
   vim.api.nvim_cmd({ cmd = "tabnew", args = { config_init } }, {})
   tab = vim.api.nvim_get_current_tabpage()
-  start_codex_terminal(tab)
-end, { desc = "Codex in Neovim config" })
+  start_agent_terminal(tab)
+end, { desc = "Open config workspace" })

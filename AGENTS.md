@@ -18,7 +18,7 @@ init.lua
 ├── config_update config repository update command and shared reload helper
 ├── keymaps       general editing, tabs, reload, terminal, and tmux navigation
 ├── diagnostics   diagnostic presentation and navigation
-├── codex        Codex config-workspace layout and terminal lifecycle
+├── config_workspace  Config workspace layout and terminal lifecycle
 ├── plugins       vim.pack declarations and shared plugin configuration
 ├── treesitter    parsers, highlighting, and structural text objects
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
@@ -53,7 +53,7 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `lua/config/config_update.lua`: asynchronous config pull command and reload helper;
   loaded before keymaps, which owns the reload shortcut.
 - `lua/config/diagnostics.lua`: `vim.diagnostic` configuration and maps.
-- `lua/config/codex.lua`: Codex config-workspace layout, singleton launch,
+- `lua/config/config_workspace.lua`: Config workspace layout, singleton launch,
   resume, and exit behavior.
 - `lua/config/lazygit.lua`: Lazygit per-repository floating-terminal launch, hide,
      restore, and exit behavior.
@@ -77,7 +77,7 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `plugins/workspace.nvim/lua/workspace/fzf.lua`: streaming files and combined grep adapter.
 - `plugins/workspace.nvim/lua/workspace/neotree.lua`: browse-only Neo-tree source,
   lazy expansion and cached nodes. Never scans the roots' common parent.
-  The plugin never imports `config.*`; init.lua injects Codex/yadm policy and
+  The plugin never imports `config.*`; init.lua injects Agent/yadm policy and
   tool modules retain keymap ownership. plugins.lua adds its runtime path once.
 - `lua/config/lsp.lua`: language-server discovery, configuration, and
   buffer-local LSP mappings.
@@ -85,7 +85,7 @@ also use `lua/config/` without sharing or colliding with these modules.
   recent-file navigation.
 - `tests/smoke.lua`: reload and invariant checks for core options, mappings,
   commands, and autocmd cardinality.
-- `tests/codex_workspace.lua`: Codex workspace layout, reload, singleton,
+- `tests/config_workspace.lua`: Agent workspace layout, reload, singleton,
   process-exit cleanup, and reopen checks with a stubbed terminal job.
 - `tests/lazygit.lua`: Lazygit singleton float hide, reload, restore, and
   process-exit cleanup checks with a stubbed terminal job.
@@ -138,12 +138,15 @@ of fzf-lua/Neo-tree dependencies; adapters may depend on the core, not vice vers
      string. Worktrees and submodules have distinct instances. Launch in the
      selected file's repo, falling back to effective tab/window cwd for terminals.
      Restore floats in the invoking tab without restarting their processes.
-   - Codex uses one dedicated `nvim-lite` tab with a tab-local config working
+   - Config workspace uses one dedicated `Nvim Config` tab with a tab-local config working
      directory, a left terminal, and `init.lua` on the right. It starts with
      `codex -c 'tui.notifications=false' resume --last` to avoid tmux-wrapped
      notification text leaking into the terminal; global notification config is
-     unchanged. When the process exits, remove only its terminal
+     unchanged. `vim.g.agent_command` may override the default argv list.
+     When the process exits, remove only its terminal
      window and buffer so the editable config workspace remains open.
+     Config agent buffers use `bufhidden=wipe`: closing their last window stops
+     the terminal job instead of leaving a hidden process. Lazygit still hides.
 7. Preserve the tmux navigation fast path. Use `vim.system()` to call tmux
    directly; do not start a shell for every pane movement.
 8. Keep repository-aware behavior explicit. General fzf searches use Neovim's
@@ -182,7 +185,7 @@ of fzf-lua/Neo-tree dependencies; adapters may depend on the core, not vice vers
     `:WorkspaceAdd` prompts; `:WorkspaceRemove` selects a root to remove;
     `:WorkspaceInfo` lists roots; `:WorkspaceClear` restores ordinary browsing.
     Roots survive config reload but are not persisted across Neovim restarts.
-    The Codex config tab (codex_config_tab marker) is excluded and keeps its
+    The config workspace tab (config_workspace_tab marker) is excluded and keeps its
     normal config-directory browsing. Inject that exclusion from init.lua;
     workspace commands manage the global list even from an excluded tab.
     Root changes refresh or close workspace trees in all tabs without stealing focus.

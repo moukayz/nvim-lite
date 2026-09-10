@@ -7,7 +7,8 @@ require("tokyonight").setup({
   },
 })
 local theme_group = vim.api.nvim_create_augroup("ConfigTheme", { clear = true })
-vim.cmd.colorscheme("rose-pine-main")
+vim.opt.background = "dark"
+vim.cmd.colorscheme("gruvbox-material")
 
 vim.opt.fillchars:append({ diff = " " })
 require("diffview").setup({ enhanced_diff_hl = true })
@@ -59,8 +60,8 @@ local function preserve_content_tab_name(name, context)
 end
 
 local function format_winbar_filename(name)
-  if vim.b.codex_config_buffer then
-    return "Codex"
+  if vim.b.config_agent_buffer then
+    return "Agent"
   end
   if vim.b.lazygit_buffer then
     return "Lazygit"

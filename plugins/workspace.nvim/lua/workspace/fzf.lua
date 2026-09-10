@@ -101,15 +101,15 @@ function M.find_files()
   return true
 end
 
-function M.live_grep()
+function M.live_grep(options)
   local roots, valid = workspace.snapshot()
   if #roots == 0 or workspace.is_blocked() then return false end
-  require("fzf-lua").live_grep({
+  require("fzf-lua").live_grep(vim.tbl_extend("force", options or {}, {
     search_paths = roots, cwd = roots[1], prompt = "Workspace grep> ",
     fn_selected = function(selected, opts)
       if valid() then require("fzf-lua.actions").act(selected, opts) end
     end,
-  })
+  }))
   return true
 end
 

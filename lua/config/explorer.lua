@@ -72,6 +72,7 @@ function M.setup(options)
       },
     },
     filesystem = {
+      use_libuv_file_watcher = true,
       hijack_netrw_behavior = started_with_directory() and "disabled" or "open_default",
       follow_current_file = {
         enabled = true,

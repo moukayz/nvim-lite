@@ -81,6 +81,37 @@ function M.setup(options)
           },
           winopts = { preview = { hidden = true } },
           actions = {
+            ["ctrl-x"] = function(selected)
+              local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
+              local worktree = index and worktrees[index]
+              if not worktree then return end
+              local target = vim.uv.fs_realpath(worktree.path) or vim.fs.normalize(worktree.path)
+              if worktree.bare or target == current_root then
+                vim.notify("Cannot remove the current or bare worktree", vim.log.levels.WARN)
+                return
+              end
+              vim.ui.select({ "Cancel", "Remove" }, {
+                prompt = "Remove worktree directory " .. worktree.path .. "? (branch is kept)",
+              }, function(choice)
+                if choice ~= "Remove" then return end
+                for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                  local name = vim.api.nvim_buf_get_name(buf)
+                  local path = vim.uv.fs_realpath(name) or vim.fs.normalize(name)
+                  if vim.bo[buf].modified and vim.startswith(path, target .. "/") then
+                    vim.notify("Worktree has unsaved buffers; removal cancelled", vim.log.levels.WARN)
+                    return
+                  end
+                end
+                vim.system({ "git", "-C", root, "worktree", "remove", "--", worktree.path },
+                  { text = true }, vim.schedule_wrap(function(result)
+                    if result.code ~= 0 then
+                      vim.notify("Worktree removal failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR)
+                    else
+                      vim.notify("Removed worktree: " .. worktree.path .. "; branch kept")
+                    end
+                  end))
+              end)
+            end,
             ["ctrl-t"] = function(selected)
               local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
               local worktree = index and worktrees[index]
@@ -115,9 +146,22 @@ function M.setup(options)
 
   vim.keymap.set("n", "<leader>f", find_files, { desc = "Find files" })
   vim.keymap.set("n", "<leader>/", function()
-    if options.live_grep and options.live_grep() then return end
-    fzf.live_grep()
+    -- Restore only grep's query, not a previous picker's cwd or callbacks.
+    local opts = { __resume_key = "profile_live_grep" }
+    opts.search = require("fzf-lua.config").resume_get("search", opts)
+    opts.no_esc = true
+    if options.live_grep and options.live_grep(opts) then return end
+    opts.cwd = vim.fn.getcwd()
+    fzf.live_grep(opts)
   end, { desc = "Search repository" })
+  vim.keymap.set("x", "<leader>/", function()
+    local search = require("fzf-lua.utils").get_visual_selection()
+    if search == "" then return end
+    local opts = { search = search, no_esc = false, __resume_key = "profile_live_grep" }
+    if options.live_grep and options.live_grep(opts) then return end
+    opts.cwd = vim.fn.getcwd()
+    fzf.live_grep(opts)
+  end, { desc = "Search selected text" })
   vim.keymap.set("n", "<leader>b", fzf.buffers, { desc = "Switch buffers" })
   vim.keymap.set("n", "<leader>w", fzf.tabs, { desc = "Switch windows across tabs" })
   vim.keymap.set("n", "<leader>sw", fzf.grep_cword, { desc = "Search word under cursor" })

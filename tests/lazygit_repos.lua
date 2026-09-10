@@ -30,7 +30,7 @@ hide()
 
 vim.cmd("tabnew")
 vim.api.nvim_cmd({ cmd = "tcd", args = { config } }, {})
--- Like the Codex terminal: no file path, so use this tab's cwd, not global cwd.
+-- Like the Agent terminal: no file path, so use this tab's cwd, not global cwd.
 vim.bo.buftype = "nofile"
 local config_tab = vim.api.nvim_get_current_tabpage()
 local config_buffer = open()

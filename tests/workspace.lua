@@ -75,8 +75,8 @@ assert(not matches.stdout:find("outside match", 1, true), "grep escaped workspac
 local tab = vim.api.nvim_get_current_tabpage()
 vim.cmd("tabnew")
 assert(vim.deep_equal(workspace.roots(), { a, b }), "ordinary tabs must share roots")
--- The dedicated Codex config tab is explicitly excluded, not every terminal.
-vim.t.codex_config_tab = true
+-- The dedicated Agent config tab is explicitly excluded, not every terminal.
+vim.t.config_workspace_tab = true
 vim.api.nvim_cmd({ cmd = "tcd", args = { vim.fn.stdpath("config") } }, {})
 assert(#workspace.roots() == 0, "config tab inherited global roots")
 assert(not require("workspace.fzf").find_files() and not require("workspace.fzf").live_grep())

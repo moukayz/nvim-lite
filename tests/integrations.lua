@@ -22,6 +22,35 @@ picker.setup()
 vim.fn.maparg("<leader>/", "n", false, true).callback()
 assert(grep_count == 1, "ordinary grep fallback")
 fzf.live_grep = old_grep
+local utils = require("fzf-lua.utils")
+local old_selection = utils.get_visual_selection
+utils.get_visual_selection = function() return "literal.*[text]" end
+local selection_opts
+fzf.live_grep = function(opts) selection_opts = opts end
+picker.setup()
+vim.fn.maparg("<leader>/", "x", false, true).callback()
+assert(selection_opts.search == "literal.*[text]" and selection_opts.no_esc == false)
+assert(selection_opts.cwd == vim.fn.getcwd())
+picker.setup({ live_grep = function(opts)
+  assert(opts.search == "literal.*[text]" and opts.no_esc == false)
+  return true
+end })
+vim.fn.maparg("<leader>/", "x", false, true).callback()
+utils.get_visual_selection = old_selection
+fzf.live_grep = old_grep
+local resume_config = require("fzf-lua.config")
+resume_config.resume_set("search", "previous.*query", { __resume_key = "profile_live_grep" })
+local grep_opts
+fzf.live_grep = function(opts) grep_opts = opts end
+picker.setup()
+vim.fn.maparg("<leader>/", "n", false, true).callback()
+assert(grep_opts.search == "previous.*query" and grep_opts.cwd == vim.fn.getcwd())
+picker.setup({ live_grep = function(opts)
+  assert(opts.search == "previous.*query" and opts.no_esc)
+  return true
+end })
+vim.fn.maparg("<leader>/", "n", false, true).callback()
+fzf.live_grep = old_grep
 for _, key in ipairs({ " f", " ee", " gg" }) do
   local matches = vim.tbl_filter(function(map) return map.lhs == key end, vim.api.nvim_get_keymap("n"))
   assert(#matches == 1, "mapping must have one owner: " .. key)

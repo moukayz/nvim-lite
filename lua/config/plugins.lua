@@ -12,6 +12,7 @@ local managed_plugins = {
   { src = "https://github.com/folke/tokyonight.nvim" },
   { src = "https://github.com/catppuccin/nvim", name = "catppuccin" },
   { src = "https://github.com/rose-pine/neovim", name = "rose-pine" },
+  { src = "https://github.com/sainnhe/gruvbox-material" },
   { src = "https://github.com/projekt0n/github-nvim-theme" },
   { src = "https://github.com/nvim-lualine/lualine.nvim" },
   { src = "https://github.com/nvim-neo-tree/neo-tree.nvim", version = vim.version.range("3") },
@@ -20,6 +21,7 @@ local managed_plugins = {
   { src = "https://github.com/nvim-tree/nvim-web-devicons" },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
+  { src = "https://github.com/MeanderingProgrammer/render-markdown.nvim" },
   { src = "https://github.com/folke/which-key.nvim" },
 }
 
@@ -38,6 +40,8 @@ else
     end
   end
 end
+
+require("render-markdown").setup({})
 
 require("gitsigns").setup({
   current_line_blame = true,

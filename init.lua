@@ -14,7 +14,7 @@ require("config.options")
 require("config.config_update")
 require("config.keymaps")
 require("config.diagnostics")
-require("config.codex")
+require("config.config_workspace")
 require("config.plugins")
 require("config.treesitter")
 require("config.ui")
@@ -25,7 +25,7 @@ local workspace_picker = require("workspace.fzf")
 local workspace_tree = require("workspace.neotree")
 workspace.setup({
   blocked = yadm.work_tree,
-  excluded = function(tab) return vim.t[tab].codex_config_tab == true end,
+  excluded = function(tab) return vim.t[tab].config_workspace_tab == true end,
 })
 require("config.explorer").setup({
   sources = { "config.yadm_tree", "workspace.neotree" },
