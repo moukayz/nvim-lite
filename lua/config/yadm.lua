@@ -99,12 +99,14 @@ function M.find_files()
 end
 
 
-function M.toggle_tree()
+local function open_tree(toggle)
   local root = M.work_tree()
   if not root then return false end
-  require("neo-tree.command").execute({ source = "yadm", action = "focus", toggle = true, position = "left", dir = root })
+  require("neo-tree.command").execute({ source = "yadm", action = "focus", toggle = toggle, position = "left", dir = root })
   return true
 end
+function M.toggle_tree() return open_tree(true) end
+function M.focus_tree() return open_tree(false) end
 
 -- nil keeps defaults; false aborts launch after a reported error.
 function M.lazygit_args()

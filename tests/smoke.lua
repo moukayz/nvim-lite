@@ -10,6 +10,13 @@ assert_equal(vim.o.number, true, "number")
 assert_equal(vim.o.relativenumber, true, "relativenumber")
 assert_equal(vim.o.mouse, "", "mouse disabled")
 assert_equal(vim.fn.exists(":PackUpdate"), 2, "PackUpdate command")
+for _, command in ipairs({ "WorkspaceAdd", "WorkspaceRemove", "WorkspaceClear", "WorkspaceInfo" }) do
+  assert_equal(vim.fn.exists(":" .. command), 2, command)
+end
+local workspace_paths = vim.tbl_filter(function(path)
+  return path:match("/plugins/workspace%.nvim$") ~= nil
+end, vim.opt.runtimepath:get())
+assert_equal(#workspace_paths, 1, "workspace runtime path after reload")
 
 local expected_mappings = {
   ["<leader>."] = "Open Neovim config",
@@ -19,6 +26,7 @@ local expected_mappings = {
   ["<leader>cc"] = "Codex in Neovim config",
   ["<leader>dd"] = "Open local changes",
   ["<leader>ee"] = "Toggle file tree",
+  ["<leader>ef"] = "Focus file tree",
   ["<leader>f"] = "Find files",
   ["<leader>w"] = "Switch windows across tabs",
 }

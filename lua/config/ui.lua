@@ -127,10 +127,8 @@ require("lualine").setup({
         end,
       },
     },
-    lualine_b = { "branch" },
-    lualine_c = {
-      { "filename", path = 1, shorting_target = 40 },
-    },
+    lualine_b = { "branch", require("config.worktree_status").component },
+    lualine_c = {},
     lualine_x = { "diagnostics", "lsp_status" },
     lualine_y = { "filetype", "progress" },
     lualine_z = { "location" },
@@ -138,9 +136,7 @@ require("lualine").setup({
   inactive_sections = {
     lualine_a = {},
     lualine_b = {},
-    lualine_c = {
-      { "filename", path = 1 },
-    },
+    lualine_c = {},
     lualine_x = { "location" },
     lualine_y = {},
     lualine_z = {},

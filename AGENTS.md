@@ -9,7 +9,7 @@ framework without an explicit request.
 
 ## Configuration architecture
 
-`init.lua` is only the entrypoint. It clears cached `config.*` modules so
+`init.lua` is only the entrypoint. It clears cached `config.*` and `workspace*` modules so
 `<Space>rs` performs a real reload, then loads modules in dependency order:
 
 ```text
@@ -23,6 +23,7 @@ init.lua
 ├── treesitter    parsers, highlighting, and structural text objects
 ├── ui            colorscheme, Diffview visuals, statusline, and tabline
 ├── yadm          context-specific handlers injected by init.lua
+├── workspace     bundled local plugin; global multi-root commands and adapters
 ├── explorer      Neo-tree configuration and Git-root resolution
 ├── lazygit       per-repository floating-terminal lifecycle
 ├── picker        fzf-lua pickers; consumes explorer.git_root_at_cursor()
@@ -62,12 +63,22 @@ also use `lua/config/` without sharing or colliding with these modules.
   objects.
 - `lua/config/ui.lua`: theme, separators, Diffview rendering, lualine, and
   tab labels.
+- `lua/config/worktree_status.lua`: ui.lua helper for asynchronous, cached
+  buffer-directory worktree labels; never run Git during statusline rendering.
 - `lua/config/explorer.lua`: Neo-tree and reusable repository-root logic.
 - `lua/config/picker.lua`: fzf-lua configuration and picker actions.
 - `lua/config/yadm.lua`: yadm context, async dotfiles picker, tree selection and
   Lazygit argument policy. The source adapter below consumes its context API.
 - `lua/config/yadm_tree.lua`: Neo-tree tracked-dotfiles source; builds parent
   directories from `yadm ls-files` without scanning home. Browse/open/refresh only.
+- `plugins/workspace.nvim/lua/workspace/init.lua`: UI-independent global roots,
+  commands, context callbacks, and change events. No cwd changes.
+- `plugins/workspace.nvim/lua/workspace/scan.lua`: asynchronous fd directory listings.
+- `plugins/workspace.nvim/lua/workspace/fzf.lua`: streaming files and combined grep adapter.
+- `plugins/workspace.nvim/lua/workspace/neotree.lua`: browse-only Neo-tree source,
+  lazy expansion and cached nodes. Never scans the roots' common parent.
+  The plugin never imports `config.*`; init.lua injects Codex/yadm policy and
+  tool modules retain keymap ownership. plugins.lua adds its runtime path once.
 - `lua/config/lsp.lua`: language-server discovery, configuration, and
   buffer-local LSP mappings.
 - `lua/config/startup.lua`: native directory-startup page and project-local
@@ -88,11 +99,21 @@ also use `lua/config/` without sharing or colliding with these modules.
 - `tests/yadm_tree.lua`: real Neo-tree rendering, opening, toggle and reload checks.
 - `tests/integrations.lua`: generic setup defaults, injection, and single mapping ownership.
 - `tests/treesitter.lua`: CLI bootstrap success/failure, installer selection and reload guards.
+- `tests/workspace.lua`: real fd/rg and Neo-tree checks for multi-root scope,
+  commands, shared roots, config-tab exclusion, reload persistence, and stale-result rejection.
+- `tests/workspace_tree_lazy.lua`: shallow scan boundaries, cached expansions,
+  refresh, cancellation, and a large hidden-descendant fixture.
+- `tests/workspace_stream.lua`: immediate picker opening, incremental file results,
+  NUL chunk boundaries, literal filenames, and scan cancellation.
+- `tests/workspace_plugin.lua`: standalone core loading and adapter dependency boundaries.
+- `tests/workspace_follow.lua`: current-file reveal, ancestor-only scans, focus,
+  closed-tree behavior, reload, and stale-follow rejection.
 - `nvim-pack-lock.json`: revisions managed by `vim.pack`; do not edit by hand.
 
 Create a new module only when behavior has a distinct responsibility that does
-not fit an existing file. Keep module names under the profile-local `config`
-namespace.
+not fit an existing file. Keep configuration under `config`; the bundled local
+workspace plugin owns the independent `workspace` namespace. Keep its core free
+of fzf-lua/Neo-tree dependencies; adapters may depend on the core, not vice versa.
 
 ## Modification rules
 
@@ -144,14 +165,40 @@ namespace.
 11. Missing Tree-sitter CLI is installed asynchronously before missing parsers:
     Homebrew, otherwise profile-local npm/Cargo. Never sudo from Neovim; attempt
     once per process, preserve the guard across reloads, and report failures.
-12. Tool setup APIs are explicit, not a registry: `picker.setup({find_files})`
-    and `explorer.setup({sources, toggle_tree})` accept handlers returning true
+12. Tool setup APIs are explicit, not a registry: `picker.setup({find_files, live_grep})`
+    and `explorer.setup({sources, toggle_tree, focus_tree})` accept handlers returning true
     when handled and false/nil for normal fallback. Lazygit accepts
     `setup({launch_args, cwd})`: launch_args returning nil uses defaults, an argv
     list appends arguments, false cancels a new launch. Resolve launch_args only
     for new jobs. The cwd resolver runs on invocation before repository lookup;
     init.lua injects yadm/root policy after explorer has loaded.
     Repeated setup replaces handlers; Neo-tree is configured once per reload.
+    Explorer owns `<Space>ef` in normal/terminal mode: exit terminal input and
+    focus/open the context-appropriate tree, without toggling it closed.
+13. The multi-root workspace is opt-in and global across ordinary tabs. `:WorkspaceAdd ~/A ~/B`
+    adds canonical directories (duplicates ignored, nested roots rejected).
+    `:WorkspaceAdd` prompts; `:WorkspaceRemove` selects a root to remove;
+    `:WorkspaceInfo` lists roots; `:WorkspaceClear` restores ordinary browsing.
+    Roots survive config reload but are not persisted across Neovim restarts.
+    The Codex config tab (codex_config_tab marker) is excluded and keeps its
+    normal config-directory browsing. Inject that exclusion from init.lua;
+    workspace commands manage the global list even from an excluded tab.
+    Root changes refresh or close workspace trees in all tabs without stealing focus.
+    The workspace file picker opens immediately and streams fd results; never
+    wait for a complete recursive listing or sort it before opening fzf.
+    Space f and Space / combine only those roots; Space ee uses a browse-only
+    tree. Ignore files still apply, .git is excluded, and directory symlinks
+    are not traversed. Git actions still resolve the selected file's repository.
+    No file mutation commands in the workspace tree. Explicit workspaces are
+    disabled in yadm sessions; inject that policy from init.lua.
+    Tree expansion must scan only immediate children (fd --max-depth 1), not
+    recursively reuse the file picker's listing. Cache loaded nodes across
+    close/reopen; only R or workspace-root changes invalidate listings. Refresh
+    only expanded branches and discard cancelled or stale directory results.
+    Open workspace trees follow normal file buffers in the current tab without
+    stealing focus; reveal loads only the target's ancestors. Never reopen a
+    closed tree on buffer changes. Ignore outside-root files and special buffers;
+    retain manually expanded branches and cancel superseded follow targets.
 
 ## Validation
 

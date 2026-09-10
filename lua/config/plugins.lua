@@ -1,3 +1,10 @@
+-- Bundled local plugin; no download or package-manager entry required.
+local profile = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(debug.getinfo(1, "S").source:sub(2))))
+local workspace_path = vim.fs.joinpath(profile, "plugins", "workspace.nvim")
+if not vim.tbl_contains(vim.opt.runtimepath:get(), workspace_path) then
+  vim.opt.runtimepath:prepend(workspace_path)
+end
+
 local managed_plugins = {
   { src = "https://github.com/ibhagwan/fzf-lua", version = "main" },
   { src = "https://github.com/lewis6991/gitsigns.nvim" },

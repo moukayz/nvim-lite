@@ -13,6 +13,15 @@ picker.setup()
 vim.fn.maparg("<leader>f", "n", false, true).callback()
 assert(count == 2, "setup did not clear old handler")
 fzf.files = old_files
+local old_grep, grep_count = fzf.live_grep, 0
+fzf.live_grep = function() grep_count = grep_count + 1 end
+picker.setup({ live_grep = function() return true end })
+vim.fn.maparg("<leader>/", "n", false, true).callback()
+assert(grep_count == 0)
+picker.setup()
+vim.fn.maparg("<leader>/", "n", false, true).callback()
+assert(grep_count == 1, "ordinary grep fallback")
+fzf.live_grep = old_grep
 for _, key in ipairs({ " f", " ee", " gg" }) do
   local matches = vim.tbl_filter(function(map) return map.lhs == key end, vim.api.nvim_get_keymap("n"))
   assert(#matches == 1, "mapping must have one owner: " .. key)

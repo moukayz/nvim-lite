@@ -81,6 +81,20 @@ function M.setup(options)
           },
           winopts = { preview = { hidden = true } },
           actions = {
+            ["ctrl-t"] = function(selected)
+              local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
+              local worktree = index and worktrees[index]
+              if not worktree then return end
+              if worktree.bare or vim.fn.isdirectory(worktree.path) ~= 1 then
+                vim.notify("Worktree has no accessible working directory: " .. worktree.path, vim.log.levels.WARN)
+                return
+              end
+              vim.cmd("tabnew")
+              vim.api.nvim_cmd({ cmd = "tcd", args = { worktree.path } }, {})
+              require("neo-tree.command").execute({
+                source = "filesystem", action = "focus", position = "left", dir = worktree.path,
+              })
+            end,
             ["enter"] = function(selected)
               local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
               local worktree = index and worktrees[index]
@@ -100,7 +114,10 @@ function M.setup(options)
   end
 
   vim.keymap.set("n", "<leader>f", find_files, { desc = "Find files" })
-  vim.keymap.set("n", "<leader>/", fzf.live_grep, { desc = "Search repository" })
+  vim.keymap.set("n", "<leader>/", function()
+    if options.live_grep and options.live_grep() then return end
+    fzf.live_grep()
+  end, { desc = "Search repository" })
   vim.keymap.set("n", "<leader>b", fzf.buffers, { desc = "Switch buffers" })
   vim.keymap.set("n", "<leader>w", fzf.tabs, { desc = "Switch windows across tabs" })
   vim.keymap.set("n", "<leader>sw", fzf.grep_cword, { desc = "Search word under cursor" })

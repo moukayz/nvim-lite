@@ -113,6 +113,13 @@ function M.setup(options)
     if options.toggle_tree and options.toggle_tree() then return end
     vim.cmd("Neotree filesystem toggle reveal left")
   end, { desc = "Toggle file tree" })
+  vim.keymap.set({ "n", "t" }, "<leader>ef", function()
+    vim.cmd("stopinsert")
+    vim.schedule(function()
+      if options.focus_tree and options.focus_tree() then return end
+      require("neo-tree.command").execute({ source = "filesystem", action = "focus", position = "left" })
+    end)
+  end, { desc = "Focus file tree" })
   vim.keymap.set("n", "<leader>eg", function()
     require("neo-tree.command").execute({
       action = "focus",
