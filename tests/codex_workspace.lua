@@ -9,7 +9,8 @@ vim.opt.swapfile = false
 
 vim.fn.jobstart = function(command, options)
   starts = starts + 1
-  assert(vim.deep_equal(command, { "codex", "resume", "--last" }), "unexpected Codex command")
+  assert(vim.deep_equal(command, { "codex", "-c", "tui.notifications=false", "resume", "--last" }),
+    "Codex terminal notifications must be disabled inside Neovim")
   assert_equal(options.cwd, config_dir, "Codex cwd")
   assert_equal(options.term, true, "terminal job")
   return starts

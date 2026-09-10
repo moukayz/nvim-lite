@@ -89,7 +89,8 @@ local function start_codex_terminal(tab)
 
   local terminal_win = vim.api.nvim_get_current_win()
   local terminal_buffer = vim.api.nvim_get_current_buf()
-  local job = vim.fn.jobstart({ "codex", "resume", "--last" }, {
+  -- Disable terminal notifications here; the external desktop hook is unchanged.
+  local job = vim.fn.jobstart({ "codex", "-c", "tui.notifications=false", "resume", "--last" }, {
     term = true,
     cwd = config_dir,
   })

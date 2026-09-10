@@ -140,7 +140,9 @@ of fzf-lua/Neo-tree dependencies; adapters may depend on the core, not vice vers
      Restore floats in the invoking tab without restarting their processes.
    - Codex uses one dedicated `nvim-lite` tab with a tab-local config working
      directory, a left terminal, and `init.lua` on the right. It starts with
-     `codex resume --last`; when the process exits, remove only its terminal
+     `codex -c 'tui.notifications=false' resume --last` to avoid tmux-wrapped
+     notification text leaking into the terminal; global notification config is
+     unchanged. When the process exits, remove only its terminal
      window and buffer so the editable config workspace remains open.
 7. Preserve the tmux navigation fast path. Use `vim.system()` to call tmux
    directly; do not start a shell for every pane movement.
