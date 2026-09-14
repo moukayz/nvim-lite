@@ -1,6 +1,9 @@
 local installed, parses, jobs = false, 0, {}
 local manager = "npm"
-package.loaded["nvim-treesitter.config"] = { norm_languages = function() return { "c" } end }
+package.loaded["nvim-treesitter.config"] = { norm_languages = function(languages)
+  assert(vim.tbl_contains(languages, "ruby"), "Ruby parser missing")
+  return { "c" }
+end }
 package.loaded["nvim-treesitter"] = { install = function() parses = parses + 1 end }
 package.loaded["nvim-treesitter-textobjects"] = { setup = function() end }
 package.loaded["nvim-treesitter-textobjects.select"] = { select_textobject = function() end }
@@ -12,6 +15,10 @@ end
 local function reload() dofile("lua/config/treesitter.lua") end
 reload()
 reload()
+assert(vim.filetype.match({ filename = "/tmp/Podfile" }) == "ruby", "Podfile must use Ruby")
+assert(vim.filetype.match({ filename = "/tmp/Example.podspec" }) == "ruby", "podspec must use Ruby")
+local ruby_autocmds = vim.api.nvim_get_autocmds({ group = "NvimLiteTreesitter", event = "FileType", pattern = "ruby" })
+assert(#ruby_autocmds == 1, "Ruby highlighting must remain enabled once after reload")
 assert(#jobs == 1 and parses == 0, "reload duplicated install or installed parsers too early")
 assert(jobs[1].argv[1] == "npm" and jobs[1].argv[5] == vim.fs.joinpath(vim.fn.stdpath("data"), "tree-sitter-cli"))
 installed = true

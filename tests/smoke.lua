@@ -19,6 +19,8 @@ end, vim.opt.runtimepath:get())
 assert_equal(#workspace_paths, 1, "workspace runtime path after reload")
 
 local expected_mappings = {
+  ["<A-j>"] = "Scroll viewport down",
+  ["<A-k>"] = "Scroll viewport up",
   ["<leader>."] = "Open Neovim config",
   ["<leader>rs"] = "Source Neovim config",
   ["<leader>z"] = "Toggle window zoom",
@@ -41,7 +43,7 @@ local expected_autocmd_counts = {
   ConfigAgentTerminal = 1,
   LazygitTerminal = 1,
   NvimLiteStartup = 1,
-  NvimLiteTreesitter = 7,
+  NvimLiteTreesitter = 8,
   NvimLiteLsp = 1,
 }
 for group, count in pairs(expected_autocmd_counts) do

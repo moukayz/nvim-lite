@@ -7,15 +7,41 @@ function M.setup(options)
     return
   end
 
+  local actions = require("fzf-lua.actions")
+  local action_definitions = require("fzf-lua.core").ACTION_DEFINITIONS
+  local file_hints = {}
+  for key, action in pairs({
+    ["alt-i"] = actions.toggle_ignore,
+    ["alt-h"] = actions.toggle_hidden,
+    ["alt-f"] = actions.toggle_follow,
+  }) do
+    file_hints[key] = { fn = action, reuse = true, header = action_definitions[action][1] }
+  end
+
   fzf.setup({
+    keymap = { builtin = {
+      ["<Esc>"] = "hide",
+      ["<C-c>"] = "abort",
+      ["<A-v>"] = "toggle-preview",
+      ["<A-r>"] = "toggle-preview-cw",
+      ["<A-m>"] = "toggle-fullscreen",
+      ["<A-w>"] = "toggle-preview-wrap",
+    } },
     fzf_opts = { ["--layout"] = "reverse-list" },
     files = {
+      actions = file_hints,
+      winopts = { preview = { layout = "vertical", vertical = "up:45%" } },
       fd_opts = "--color=never --type f --hidden --follow --exclude .git",
     },
     grep = {
       rg_opts = "--column --line-number --no-heading --color=always --smart-case --hidden --glob '!.git'",
     },
   })
+  local grep_buffer
+  local function grep_options(opts)
+    opts.winopts = { on_create = function(event) grep_buffer = event.bufnr end }
+    return opts
+  end
 
   local function review_worktree()
     local root = require("config.explorer").git_root_at_cursor()
@@ -81,7 +107,7 @@ function M.setup(options)
           },
           winopts = { preview = { hidden = true } },
           actions = {
-            ["ctrl-x"] = function(selected)
+            ["ctrl-x"] = { header = "Remove worktree", fn = function(selected)
               local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
               local worktree = index and worktrees[index]
               if not worktree then return end
@@ -111,8 +137,8 @@ function M.setup(options)
                     end
                   end))
               end)
-            end,
-            ["ctrl-t"] = function(selected)
+            end },
+            ["ctrl-t"] = { header = "Open tab", fn = function(selected)
               local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
               local worktree = index and worktrees[index]
               if not worktree then return end
@@ -125,14 +151,14 @@ function M.setup(options)
               require("neo-tree.command").execute({
                 source = "filesystem", action = "focus", position = "left", dir = worktree.path,
               })
-            end,
-            ["enter"] = function(selected)
+            end },
+            ["enter"] = { header = "Open diff", fn = function(selected)
               local index = selected[1] and tonumber(selected[1]:match("^(%d+)\t"))
               local worktree = index and worktrees[index]
               if worktree then
                 vim.api.nvim_cmd({ cmd = "DiffviewOpen", args = { "-C=" .. worktree.path } }, {})
               end
-            end,
+            end },
           },
         })
       end)
@@ -146,8 +172,9 @@ function M.setup(options)
 
   vim.keymap.set("n", "<leader>f", find_files, { desc = "Find files" })
   vim.keymap.set("n", "<leader>/", function()
+    if grep_buffer and vim.api.nvim_buf_is_valid(grep_buffer) and fzf.unhide() then return end
     -- Restore only grep's query, not a previous picker's cwd or callbacks.
-    local opts = { __resume_key = "profile_live_grep" }
+    local opts = grep_options({ __resume_key = "profile_live_grep" })
     opts.search = require("fzf-lua.config").resume_get("search", opts)
     opts.no_esc = true
     if options.live_grep and options.live_grep(opts) then return end
@@ -157,7 +184,7 @@ function M.setup(options)
   vim.keymap.set("x", "<leader>/", function()
     local search = require("fzf-lua.utils").get_visual_selection()
     if search == "" then return end
-    local opts = { search = search, no_esc = false, __resume_key = "profile_live_grep" }
+    local opts = grep_options({ search = search, no_esc = false, __resume_key = "profile_live_grep" })
     if options.live_grep and options.live_grep(opts) then return end
     opts.cwd = vim.fn.getcwd()
     fzf.live_grep(opts)

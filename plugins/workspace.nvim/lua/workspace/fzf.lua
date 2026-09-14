@@ -4,6 +4,7 @@ local picker_request = 0
 
 local function show_files(roots, valid)
   local labels, items = workspace.labels(roots), {}
+  local picker_buffer
   local job, closed = nil, false
   local function stop()
     closed = true
@@ -84,7 +85,16 @@ local function show_files(roots, valid)
   end
   require("fzf-lua").fzf_exec(contents, {
     prompt = "Workspace files> ", cwd = roots[1],
-    winopts = { on_close = stop },
+    winopts = {
+      on_create = function(event) picker_buffer = event.bufnr end,
+      on_close = function()
+        -- Hide closes the window, not the terminal. Keep streaming while hidden.
+        if not picker_buffer then stop(); return end
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(picker_buffer) then stop() end
+        end)
+      end,
+    },
     previewer = { _ctor = function() return previewer end },
     fzf_opts = { ["--delimiter"] = "\t", ["--with-nth"] = "2.." },
     actions = { enter = open(), ["ctrl-s"] = open("split"),

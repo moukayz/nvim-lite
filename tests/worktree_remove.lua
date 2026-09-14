@@ -25,7 +25,11 @@ assert(vim.wait(2000, function() return opts ~= nil end))
 local selected
 for _, entry in ipairs(entries) do if entry:find(target, 1, true) then selected = entry end end
 assert(selected)
-local function remove() opts.actions["ctrl-x"]({ selected }); assert(confirmation) end
+local function remove()
+  assert(opts.actions["ctrl-x"].header == "Remove worktree")
+  opts.actions["ctrl-x"].fn({ selected })
+  assert(confirmation)
+end
 remove(); confirmation("Cancel")
 assert(vim.fn.isdirectory(target) == 1)
 vim.fn.writefile({ "untracked" }, target .. "/dirty.txt")

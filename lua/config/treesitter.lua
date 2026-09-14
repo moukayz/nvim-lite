@@ -5,9 +5,11 @@ local parsers = {
   "markdown",
   "markdown_inline",
   "python",
+  "ruby",
   "tsx",
   "typescript",
 }
+vim.filetype.add({ filename = { Podfile = "ruby" }, extension = { podspec = "ruby" } })
 local cli_root = vim.fs.joinpath(vim.fn.stdpath("data"), "tree-sitter-cli")
 local cli_bin = vim.fs.joinpath(cli_root, "bin")
 if not vim.tbl_contains(vim.split(vim.env.PATH or "", ":", { plain = true }), cli_bin) then
@@ -59,6 +61,7 @@ vim.api.nvim_create_autocmd("FileType", {
     "javascript",
     "javascriptreact",
     "python",
+    "ruby",
     "typescript",
     "typescriptreact",
   },
